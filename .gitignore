@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Simulation outputs (generated per-run, not source)
+annual_daylight_sim/
+daylight_factor_sim/
+studies/
+
+# Ladybug / Radiance artifacts
+*.oct
+*.ill
+*.res
+*.amb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

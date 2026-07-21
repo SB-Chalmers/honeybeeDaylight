@@ -1,0 +1,30 @@
+# Daylight Simulation API — production compose file
+#
+# First-time setup on the university VM:
+#   1. git clone <repo> && cd honeybeeDaylight
+#   2. Copy EPW files into ./weather/  (e.g. gothenburg.epw)
+#   3. cp .env.example .env  and set ALLOWED_ORIGINS
+#   4. docker compose up -d
+#
+# Update to latest code:
+#   git pull && docker compose up -d --build
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./weather:/app/weather   # EPW files — add new cities here
+      - ./studies:/app/studies   # per-study simulation outputs
+      - ./data:/app/data         # SQLite database (survives restarts)
+    environment:
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - WORKERS=${WORKERS:-2}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

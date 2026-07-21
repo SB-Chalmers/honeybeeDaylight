@@ -1,0 +1,30 @@
+# Git / editor
+.git/
+.gitignore
+*.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Simulation outputs (generated at runtime, not source)
+studies/
+annual_daylight_sim/
+daylight_factor_sim/
+
+# Database (generated at runtime)
+data/
+
+# Test suite
+tests/
+
+# Dev scripts
+scripts/
+
+# Misc
+.DS_Store
+*.png
+*.jpg
