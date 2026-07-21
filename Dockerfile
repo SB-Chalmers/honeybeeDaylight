@@ -17,9 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Radiance ray-tracing binaries
 # Official NREL release: https://github.com/NREL/Radiance/releases
-ARG RADIANCE_VERSION=5.4.0
+ARG RADIANCE_VERSION=5.2
+ARG RADIANCE_BUILD=dd0f8e38a7
 RUN wget -q -O /tmp/radiance.tar.gz \
-      "https://github.com/NREL/Radiance/releases/download/${RADIANCE_VERSION}/radiance-${RADIANCE_VERSION}-Linux.tar.gz" \
+      "https://github.com/NREL/Radiance/releases/download/${RADIANCE_VERSION}/radiance-${RADIANCE_VERSION}.${RADIANCE_BUILD}-Linux.tar.gz" \
     && tar -xzf /tmp/radiance.tar.gz -C /usr/local \
     && rm /tmp/radiance.tar.gz
 
