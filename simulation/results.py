@@ -13,11 +13,32 @@ Public API
 parse_df(project_folder, grid_name='floor_grid') -> dict
 parse_annual(project_folder, grid_name='floor_grid',
              da_lux=300, sda_target_pct=50) -> dict
+parse_sensor_points(project_folder, grid_name='floor_grid') -> list[list[float]]
 """
 
 import os
 
 import numpy as np
+
+
+def parse_sensor_points(project_folder: str, grid_name: str = 'floor_grid') -> list[list[float]]:
+    """Parse sensor point coordinates from Honeybee grid .pts output.
+
+    Returns [x, y, z] points in the same ordering as the result files.
+    """
+    pts_path = os.path.join(
+        project_folder, 'daylight_factor', 'model', 'grid', f'{grid_name}.pts'
+    )
+
+    points: list[list[float]] = []
+    with open(pts_path, 'r', encoding='utf-8') as f:
+        for raw in f:
+            parts = raw.strip().split()
+            if len(parts) < 3:
+                continue
+            points.append([float(parts[0]), float(parts[1]), float(parts[2])])
+
+    return points
 
 
 def parse_df(project_folder: str, grid_name: str = 'floor_grid') -> dict:

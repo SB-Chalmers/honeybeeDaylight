@@ -13,7 +13,7 @@ from ladybug.wea import Wea
 
 from simulation.inputs import load_room_inputs, validate_room_inputs
 from simulation.model import build_model, export_model
-from simulation.results import parse_annual, parse_df
+from simulation.results import parse_annual, parse_df, parse_sensor_points
 from simulation.runner import run_annual, run_df
 
 from .store import store
@@ -84,7 +84,11 @@ def run_study(
             study_id,
             status='complete',
             stage=None,
-            result={'df': df_result, 'sda': sda_result},
+            result={
+                'df': df_result,
+                'sda': sda_result,
+                'sensor_points': parse_sensor_points(project_folder),
+            },
         )
 
     except Exception as exc:

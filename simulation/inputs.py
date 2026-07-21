@@ -48,6 +48,10 @@ DEFAULT_ROOM_INPUTS = {
     'wall_thickness': 0.30,
     'additional_horizontal_shading_depth': 0.00,
     'additional_vertical_shading_depth': 0.00,
+    # Window-generation defaults aligned with the Three.js editor settings.
+    'window_width': 1.2,
+    'window_height': 1.5,
+    'window_spacing': 0.3,
 }
 
 
@@ -128,10 +132,28 @@ def validate_room_inputs(cfg: dict) -> None:
         raise ValueError('floor_to_floor_height must be > 0.')
     if cfg['wall_thickness'] < 0:
         raise ValueError('wall_thickness must be >= 0.')
+    if cfg.get('window_width', 1.2) <= 0:
+        raise ValueError('window_width must be > 0.')
+    if cfg.get('window_height', 1.5) <= 0:
+        raise ValueError('window_height must be > 0.')
+    if cfg.get('window_spacing', 0.3) < 0:
+        raise ValueError('window_spacing must be >= 0.')
 
     coords = cfg['footprint_coordinates']
     if len(coords) < 3:
         raise ValueError('footprint_coordinates must include at least 3 points.')
+
+    expected_edges = len(coords) - 1 if coords[0] == coords[-1] else len(coords)
+
+    edge_wwr = cfg.get('wwr_by_edge')
+    if edge_wwr is not None:
+        if len(edge_wwr) != expected_edges:
+            raise ValueError(
+                f'wwr_by_edge must contain exactly {expected_edges} values to match footprint edges.'
+            )
+        for i, ratio in enumerate(edge_wwr):
+            if not 0 <= ratio <= 1:
+                raise ValueError(f'wwr_by_edge[{i}] must be in [0, 1].')
 
     wwr = cfg['wwr_by_cardinal']
     for direction in ('north', 'east', 'south', 'west'):

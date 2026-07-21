@@ -46,22 +46,47 @@ def _room_from_footprint(cfg: dict) -> Room:
 
 def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
     wwr = cfg['wwr_by_cardinal']
+    edge_wwr = cfg.get('wwr_by_edge')
+    window_width = float(cfg.get('window_width', 1.2))
+    window_height = float(cfg.get('window_height', 1.5))
+    window_spacing = float(cfg.get('window_spacing', 0.3))
     h_depth = cfg['wall_thickness'] + cfg.get('additional_horizontal_shading_depth', 0.0)
     v_depth = cfg['wall_thickness'] + cfg.get('additional_vertical_shading_depth', 0.0)
 
-    for face in room.faces:
-        if str(face.type) != 'Wall':
-            continue
-        ratio = wwr.get(_cardinal_from_normal(face.normal), 0.0)
+    walls = [face for face in room.faces if str(face.type) == 'Wall']
+
+    if edge_wwr is not None:
+        if len(edge_wwr) != len(walls):
+            raise ValueError(
+                f'wwr_by_edge length ({len(edge_wwr)}) does not match wall count ({len(walls)}).'
+            )
+        ratios = edge_wwr
+    else:
+        ratios = [wwr.get(_cardinal_from_normal(face.normal), 0.0) for face in walls]
+
+    # Match frontend logic: center windows vertically within each floor height.
+    floor_height = float(cfg['floor_to_floor_height'])
+    sill_height = max(0.0, (floor_height - window_height) / 2.0)
+    centerline_separation = max(window_width + window_spacing, 0.01)
+
+    for face, ratio in zip(walls, ratios):
         if ratio <= 0:
             continue
-        face.apertures_by_ratio(ratio=ratio)
+        face.apertures_by_ratio_rectangle(
+            ratio=ratio,
+            aperture_height=window_height,
+            sill_height=sill_height,
+            horizontal_separation=centerline_separation,
+            vertical_separation=window_spacing,
+        )
+
         for aperture in face.apertures:
             if h_depth > 0:
                 aperture.overhang(depth=h_depth)
             if v_depth > 0:
                 aperture.left_fin(depth=v_depth)
                 aperture.right_fin(depth=v_depth)
+
 
 
 def _sensor_grid(room: Room, cfg: dict) -> SensorGrid:

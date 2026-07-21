@@ -43,10 +43,17 @@ class RoomInput(BaseModel):
         description='Single WWR applied to all four walls. Overridden by wwr_by_cardinal.'
     )
     wwr_by_cardinal: Optional[WwrByCardinal] = None
+    wwr_by_edge: Optional[list[float]] = Field(
+        None,
+        description='Optional per-edge WWR list aligned to footprint edge order [p0->p1, p1->p2, ...].'
+    )
 
     wall_thickness: float = Field(0.3, ge=0)
     additional_horizontal_shading_depth: float = Field(0.0, ge=0)
     additional_vertical_shading_depth: float = Field(0.0, ge=0)
+    window_width: float = Field(1.2, gt=0)
+    window_height: float = Field(1.5, gt=0)
+    window_spacing: float = Field(0.3, ge=0)
     sensor_grid: SensorGridConfig = Field(default_factory=SensorGridConfig)
 
     @field_validator('footprint_coordinates')
@@ -54,12 +61,29 @@ class RoomInput(BaseModel):
     def at_least_three_points(cls, v):
         if len(v) < 3:
             raise ValueError('footprint_coordinates must have at least 3 points.')
+        for point in v:
+            if len(point) != 2:
+                raise ValueError('Each footprint coordinate must be a 2-D pair: [x, y].')
+        return v
+
+    @field_validator('wwr_by_edge')
+    @classmethod
+    def validate_wwr_by_edge(cls, v):
+        if v is None:
+            return v
+        if len(v) < 3:
+            raise ValueError('wwr_by_edge must include at least 3 values.')
+        for ratio in v:
+            if ratio < 0 or ratio > 1:
+                raise ValueError('Each wwr_by_edge value must be in [0, 1].')
         return v
 
     def to_simulation_dict(self) -> dict:
         """Convert to the flat dict expected by simulation.inputs.load_room_inputs."""
-        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal'})
+        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge'})
         d['sensor_grid'] = self.sensor_grid.model_dump()
+        if self.wwr_by_edge is not None:
+            d['wwr_by_edge'] = self.wwr_by_edge
         if self.wwr_by_cardinal:
             d['wwr_by_cardinal'] = self.wwr_by_cardinal.model_dump()
         elif self.wwr is not None:
@@ -137,6 +161,10 @@ class StudyResult(BaseModel):
     study_id: str
     df: DfResult
     sda: Optional[SdaResult] = None
+    sensor_points: list[list[float]] = Field(
+        default_factory=list,
+        description='Sensor coordinates in Honeybee world [x, y, z], ordered to match df.values.'
+    )
 
 
 # ── Locations ─────────────────────────────────────────────────────────────────

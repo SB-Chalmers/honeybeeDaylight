@@ -32,23 +32,23 @@ _QUEENBEE = os.path.join(_venv_bin, 'queenbee')
 
 RAD_PARAMS = {
     'daylight_factor': {
-        True:  '-ab 1 -aa 0.25 -ad 256 -ar 16',
+        True:  '-ab 1 -aa 0.3 -ad 128 -ar 8',
         False: '-ab 2 -aa 0.1  -ad 2048 -ar 64',
     },
     'annual_daylight': {
-        True:  '-ab 1 -ad 512  -lw 2e-05 -dr 0',
+        True:  '-ab 1 -ad 256  -lw 5e-05 -dr 0',
         False: '-ab 2 -ad 5000 -lw 2e-05 -dr 0',
     },
     'annual_irradiance': {
-        True:  '-ab 1 -ad 512  -lw 2e-05 -dr 0',
+        True:  '-ab 1 -ad 256  -lw 5e-05 -dr 0',
         False: '-ab 2 -ad 5000 -lw 2e-05 -dr 0',
     },
     'sky_view': {
-        True:  '-aa 0.1 -ad 256  -ar 16',
+        True:  '-aa 0.2 -ad 128  -ar 8',
         False: '-aa 0.1 -ad 2048 -ar 64',
     },
     'point_in_time_grid': {
-        True:  '-ab 1 -aa 0.25 -ad 256 -ar 16',
+        True:  '-ab 1 -aa 0.3 -ad 128 -ar 8',
         False: '-ab 2 -aa 0.1  -ad 2048 -ar 64',
     },
     'direct_sun_hours': {True: None, False: None},
@@ -58,9 +58,14 @@ RAD_PARAMS = {
 # ── Internal helper ───────────────────────────────────────────────────────────
 
 def _base_settings(project_folder: str) -> RecipeSettings:
+    cpu_total = multiprocessing.cpu_count()
+    # Cap per-study workers to avoid oversubscription when multiple studies run concurrently.
+    # Override with HB_SIM_WORKERS if you need a different value.
+    worker_cap = int(os.environ.get('HB_SIM_WORKERS', '4'))
+    workers = max(1, min(cpu_total, worker_cap))
     return RecipeSettings(
         folder=project_folder,
-        workers=multiprocessing.cpu_count(),
+        workers=workers,
         reload_old=False,
     )
 

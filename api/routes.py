@@ -5,6 +5,8 @@ All v1 endpoints:
   POST   /v1/studies
   GET    /v1/studies/{study_id}
   GET    /v1/studies/{study_id}/result
+    GET    /v1/studies/{study_id}/logs
+    GET    /v1/studies/{study_id}/events
   POST   /v1/studies:run-sync
   GET    /v1/locations
 """
@@ -12,15 +14,20 @@ All v1 endpoints:
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 
 from simulation.inputs import load_room_inputs, validate_room_inputs
 from simulation.model import build_model
+from simulation.results import parse_annual, parse_df, parse_sensor_points
 
 from .schemas import (
     DfResult,
@@ -34,7 +41,7 @@ from .schemas import (
     StudyStatus,
 )
 from .store import store
-from .worker import WEATHER_DIR, run_study
+from .worker import STUDIES_ROOT, WEATHER_DIR, run_study
 
 router = APIRouter(prefix='/v1')
 
@@ -62,6 +69,14 @@ def _study_links(study_id: str) -> dict:
 def _to_result_response(study_id: str, data: dict) -> StudyResult:
     df_data = data['df']
     sda_data = data.get('sda')
+    sensor_points = data.get('sensor_points', [])
+
+    # Backward compatibility: older completed records may not store sensor_points.
+    if not sensor_points:
+      try:
+          sensor_points = parse_sensor_points(os.path.join(STUDIES_ROOT, study_id))
+      except Exception:
+          sensor_points = []
 
     df = DfResult(
         summary=df_data['summary'],
@@ -74,7 +89,98 @@ def _to_result_response(study_id: str, data: dict) -> StudyResult:
             'values':  sda_data['values'],
             'pass':    sda_data['pass'],
         })
-    return StudyResult(study_id=study_id, df=df, sda=sda)
+    return StudyResult(study_id=study_id, df=df, sda=sda, sensor_points=sensor_points)
+
+
+def _study_log_files(study_id: str) -> list[tuple[str, str]]:
+    """Return known log files for a study as (label, absolute_path)."""
+    root = os.path.join(STUDIES_ROOT, study_id)
+    candidates = [
+        ('daylight_factor.log', os.path.join(root, 'daylight_factor', '__logs__', 'logs.log')),
+        ('daylight_factor.err', os.path.join(root, 'daylight_factor', '__logs__', 'err.log')),
+        ('annual_daylight.log', os.path.join(root, 'annual_daylight', '__logs__', 'logs.log')),
+        ('annual_daylight.err', os.path.join(root, 'annual_daylight', '__logs__', 'err.log')),
+    ]
+    return [(label, path) for label, path in candidates if os.path.isfile(path)]
+
+
+def _tail_lines(path: str, max_lines: int) -> list[str]:
+    """Read up to the last max_lines from a text file."""
+    with open(path, 'r', encoding='utf-8', errors='replace') as f:
+        lines = f.readlines()
+    if max_lines <= 0:
+        return []
+    return [line.rstrip('\n') for line in lines[-max_lines:]]
+
+
+def _sse(event: str, payload: dict) -> str:
+    return f'event: {event}\ndata: {json.dumps(payload)}\n\n'
+
+
+def _request_hash(room_dict: dict, request: StudyRequest) -> str:
+    """Create a stable hash for de-duplicating equivalent study requests."""
+    payload = {
+        'room': room_dict,
+        'run_sda': request.run_sda,
+        'location': request.location,
+        'quality': request.quality,
+        'thresholds': request.thresholds.model_dump(),
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+    return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+
+def _parse_db_timestamp(ts: Optional[str]) -> Optional[datetime]:
+    if not ts:
+        return None
+    try:
+        # SQLite CURRENT_TIMESTAMP format: YYYY-MM-DD HH:MM:SS (UTC)
+        return datetime.strptime(ts, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _is_stale_running(record) -> bool:
+    if record.status not in ('running', 'queued'):
+        return False
+    updated_at = _parse_db_timestamp(record.updated_at)
+    if updated_at is None:
+        # Legacy rows created before updated_at tracking are treated as stale.
+        return True
+    return datetime.now(timezone.utc) - updated_at > timedelta(hours=2)
+
+
+def _recover_if_outputs_exist(study_id: str) -> bool:
+    """If outputs exist on disk for a stale record, synthesize and persist final result."""
+    project_folder = os.path.join(STUDIES_ROOT, study_id)
+    df_path = os.path.join(project_folder, 'daylight_factor', 'results', 'floor_grid.res')
+    if not os.path.isfile(df_path):
+        return False
+
+    try:
+        df_result = parse_df(project_folder)
+        sensor_points = parse_sensor_points(project_folder)
+
+        sda_result = None
+        annual_da = os.path.join(project_folder, 'annual_daylight', 'metrics', 'da', 'floor_grid.da')
+        if os.path.isfile(annual_da):
+            # Defaults match API defaults when thresholds are not custom-provided.
+            sda_result = parse_annual(project_folder)
+
+        store.update(
+            study_id,
+            status='complete',
+            stage=None,
+            result={
+                'df': df_result,
+                'sda': sda_result,
+                'sensor_points': sensor_points,
+            },
+            error=None,
+        )
+        return True
+    except Exception:
+        return False
 
 
 # ── POST /v1/studies ──────────────────────────────────────────────────────────
@@ -82,11 +188,20 @@ def _to_result_response(study_id: str, data: dict) -> StudyResult:
 @router.post('/studies', response_model=StudyQueued, status_code=202)
 def start_study(request: StudyRequest, background_tasks: BackgroundTasks):
     room_dict = request.room.to_simulation_dict()
+    req_hash = _request_hash(room_dict, request)
 
     try:
         sensor_count = _sensor_count(room_dict)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={'error': 'invalid_room', 'message': str(exc)})
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                'error': 'invalid_room',
+                'message': f'Unable to process room geometry: {exc}',
+            },
+        )
 
     if request.run_sda and not request.location:
         raise HTTPException(
@@ -94,8 +209,17 @@ def start_study(request: StudyRequest, background_tasks: BackgroundTasks):
             detail={'error': 'missing_location', 'message': 'location is required when run_sda=true.'},
         )
 
+    cached = store.find_by_request_hash(req_hash)
+    if cached:
+        return StudyQueued(
+            study_id=cached.study_id,
+            status=cached.status,
+            sensor_count=sensor_count,
+            links=_study_links(cached.study_id),
+        )
+
     study_id = f'std_{uuid.uuid4().hex[:12]}'
-    store.create(study_id)
+    store.create(study_id, request_hash=req_hash)
 
     background_tasks.add_task(
         run_study,
@@ -123,6 +247,17 @@ def get_status(study_id: str):
     record = store.get(study_id)
     if not record:
         raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Study {study_id} not found.'})
+
+    if _is_stale_running(record):
+        if not _recover_if_outputs_exist(study_id):
+            store.update(
+                study_id,
+                status='failed',
+                stage=None,
+                error='Stale running study record detected. Please re-run the same request.',
+            )
+        record = store.get(study_id)
+
     return StudyStatus(
         study_id=record.study_id,
         status=record.status,
@@ -138,11 +273,137 @@ def get_result(study_id: str):
     record = store.get(study_id)
     if not record:
         raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Study {study_id} not found.'})
+
+    if _is_stale_running(record):
+        if not _recover_if_outputs_exist(study_id):
+            store.update(
+                study_id,
+                status='failed',
+                stage=None,
+                error='Stale running study record detected. Please re-run the same request.',
+            )
+        record = store.get(study_id)
+
     if record.status == 'failed':
         raise HTTPException(status_code=500, detail={'error': 'simulation_failed', 'message': record.error or 'Unknown error.'})
     if record.status != 'complete':
         raise HTTPException(status_code=202, detail={'error': 'not_ready', 'message': f'Study is {record.status}.'})
     return _to_result_response(study_id, record.result)
+
+
+# ── GET /v1/studies/{study_id}/logs ──────────────────────────────────────────
+
+@router.get('/studies/{study_id}/logs')
+def get_logs(study_id: str, lines: int = Query(default=200, ge=1, le=2000)):
+    """Return a tail snapshot of known study log files."""
+    record = store.get(study_id)
+    if not record:
+        raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Study {study_id} not found.'})
+
+    logs = []
+    for label, path in _study_log_files(study_id):
+        logs.append({
+            'name': label,
+            'path': path,
+            'lines': _tail_lines(path, lines),
+        })
+
+    return {
+        'study_id': study_id,
+        'status': record.status,
+        'stage': record.stage,
+        'error': record.error,
+        'logs': logs,
+    }
+
+
+# ── GET /v1/studies/{study_id}/events (SSE) ──────────────────────────────────
+
+@router.get('/studies/{study_id}/events')
+async def stream_study_events(
+    study_id: str,
+    request: Request,
+    tail_lines: int = Query(default=50, ge=0, le=500),
+):
+    """Stream status and appended log lines as Server-Sent Events."""
+    record = store.get(study_id)
+    if not record:
+        raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Study {study_id} not found.'})
+
+    async def event_generator():
+        last_status = None
+        last_stage = None
+        offsets: dict[str, int] = {}
+
+        # Initial status snapshot.
+        current = store.get(study_id)
+        if current:
+            last_status = current.status
+            last_stage = current.stage
+            yield _sse('status', {
+                'study_id': study_id,
+                'status': current.status,
+                'stage': current.stage,
+                'error': current.error,
+            })
+
+        # Initial log tail snapshot.
+        for label, path in _study_log_files(study_id):
+            tail = _tail_lines(path, tail_lines)
+            for line in tail:
+                yield _sse('log', {'study_id': study_id, 'file': label, 'line': line})
+            try:
+                offsets[path] = os.path.getsize(path)
+            except OSError:
+                offsets[path] = 0
+
+        # Live stream loop.
+        while True:
+            if await request.is_disconnected():
+                break
+
+            current = store.get(study_id)
+            if current:
+                if current.status != last_status or current.stage != last_stage:
+                    last_status = current.status
+                    last_stage = current.stage
+                    yield _sse('status', {
+                        'study_id': study_id,
+                        'status': current.status,
+                        'stage': current.stage,
+                        'error': current.error,
+                    })
+
+                for label, path in _study_log_files(study_id):
+                    start = offsets.get(path, 0)
+                    try:
+                        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                            f.seek(start)
+                            chunk = f.read()
+                            offsets[path] = f.tell()
+                    except OSError:
+                        continue
+
+                    if chunk:
+                        for line in chunk.splitlines():
+                            yield _sse('log', {'study_id': study_id, 'file': label, 'line': line})
+
+                if current.status in ('complete', 'failed'):
+                    yield _sse('done', {
+                        'study_id': study_id,
+                        'status': current.status,
+                        'error': current.error,
+                    })
+                    break
+
+            await asyncio.sleep(1)
+
+    headers = {
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+    }
+    return StreamingResponse(event_generator(), media_type='text/event-stream', headers=headers)
 
 
 # ── POST /v1/studies:run-sync ─────────────────────────────────────────────────
@@ -156,6 +417,14 @@ async def run_sync(request: StudyRequest):
         _sensor_count(room_dict)  # validates inputs early
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={'error': 'invalid_room', 'message': str(exc)})
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                'error': 'invalid_room',
+                'message': f'Unable to process room geometry: {exc}',
+            },
+        )
 
     study_id = f'std_{uuid.uuid4().hex[:12]}'
     store.create(study_id)
