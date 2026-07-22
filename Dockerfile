@@ -11,18 +11,17 @@ FROM python:3.13-slim
 
 # System libraries required by Radiance and numpy
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget ca-certificates \
+        wget ca-certificates unzip \
         libglu1-mesa libxext6 libxi6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Radiance ray-tracing binaries
-# Official NREL release: https://github.com/NREL/Radiance/releases
-ARG RADIANCE_VERSION=5.2
-ARG RADIANCE_BUILD=dd0f8e38a7
-RUN wget -q -O /tmp/radiance.tar.gz \
-      "https://github.com/NREL/Radiance/releases/download/${RADIANCE_VERSION}/radiance-${RADIANCE_VERSION}.${RADIANCE_BUILD}-Linux.tar.gz" \
-    && tar -xzf /tmp/radiance.tar.gz -C /usr/local \
-    && rm /tmp/radiance.tar.gz
+# Radiance 5.4a — LBNL-ETA build required by lbt-recipes/honeybee-radiance
+# https://github.com/LBNL-ETA/Radiance/releases/tag/04ef26bb
+RUN wget -q -O /tmp/radiance.zip \
+      "https://github.com/LBNL-ETA/Radiance/releases/download/04ef26bb/Radiance_04ef26bb_Linux.zip" \
+    && unzip -q /tmp/radiance.zip -d /tmp/ \
+    && tar -xzf /tmp/radiance-5.4.04ef26bb60-Linux.tar.gz -C / --strip-components=1 \
+    && rm -f /tmp/radiance.zip /tmp/radiance-5.4.04ef26bb60-Linux.tar.gz
 
 ENV PATH="/usr/local/radiance/bin:${PATH}"
 ENV RAYPATH="/usr/local/radiance/lib"
