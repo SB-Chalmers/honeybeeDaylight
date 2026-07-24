@@ -141,13 +141,40 @@ Three directories are mounted as Docker volumes. They persist across container r
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/v1/studies` | Submit a building + start study |
+| `POST` | `/v1/studies` | Submit a target building plus optional context buildings + start study |
 | `GET` | `/v1/studies/{id}` | Poll study status |
 | `GET` | `/v1/studies/{id}/result` | Fetch plottable results |
 | `POST` | `/v1/studies:run-sync` | DF only, returns results directly |
 | `GET` | `/v1/locations` | List available weather locations |
 
 Full request/response schemas at `/docs`.
+
+### Multi-building context
+
+The API runs one target-room study at a time. To analyze a site with multiple
+buildings, submit one request per target building in parallel. Put every other
+building in that request's `context_buildings` array. Context buildings are
+exported as opaque detached geometry, so they can shade the target building
+without receiving sensor grids or their own daylight results.
+
+```json
+{
+    "room": {
+        "footprint_coordinates": [[0,0],[6,0],[6,5],[0,5]],
+        "floor_to_floor_height": 3.0,
+        "selected_floor_number": 1
+    },
+    "context_buildings": [
+        {
+            "footprint_coordinates": [[8,0],[14,0],[14,5],[8,5]],
+            "floors": 4,
+            "floor_to_floor_height": 3.0
+        }
+    ],
+    "run_sda": false,
+    "quality": "draft"
+}
+```
 
 ---
 

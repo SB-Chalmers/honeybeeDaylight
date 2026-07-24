@@ -31,6 +31,21 @@ class StudyRecord:
     updated_at: Optional[str] = None
 
 
+@dataclass
+class EnergyStudyRecord:
+    study_id: str
+    status: str = 'queued'
+    stage: Optional[str] = None
+    result: Optional[dict] = None
+    error: Optional[str] = None
+    request_hash: Optional[str] = None
+    epsm_simulation_id: Optional[str] = None
+    footprint_area: Optional[float] = None
+    floors: int = 1
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
 class StudyStore:
     def __init__(self, db_path: str = DB_PATH):
         self._db_path = db_path
@@ -65,6 +80,25 @@ class StudyStore:
             conn.execute(
                 'CREATE INDEX IF NOT EXISTS idx_studies_request_hash_status '
                 'ON studies (request_hash, status)'
+            )
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS energy_studies (
+                    study_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL DEFAULT "queued",
+                    stage TEXT,
+                    result TEXT,
+                    error TEXT,
+                    request_hash TEXT,
+                    epsm_simulation_id TEXT,
+                    footprint_area REAL,
+                    floors INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_energy_request_hash_status '
+                'ON energy_studies (request_hash, status)'
             )
 
     def create(self, study_id: str, request_hash: Optional[str] = None) -> StudyRecord:
@@ -146,6 +180,62 @@ class StudyStore:
             conn.execute(
                 f'UPDATE studies SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE study_id = ?',
                 values,
+            )
+
+    def create_energy(self, study_id: str, request_hash: Optional[str] = None,
+                      footprint_area: Optional[float] = None, floors: int = 1) -> EnergyStudyRecord:
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                'INSERT INTO energy_studies '
+                '(study_id, status, request_hash, footprint_area, floors, created_at, updated_at) '
+                'VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+                (study_id, 'queued', request_hash, footprint_area, floors),
+            )
+        return EnergyStudyRecord(
+            study_id=study_id, request_hash=request_hash,
+            footprint_area=footprint_area, floors=floors,
+        )
+
+    def get_energy(self, study_id: str) -> Optional[EnergyStudyRecord]:
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                'SELECT study_id, status, stage, result, error, request_hash, '
+                'epsm_simulation_id, footprint_area, floors, created_at, updated_at '
+                'FROM energy_studies WHERE study_id = ?', (study_id,)
+            ).fetchone()
+        if not row:
+            return None
+        (sid, status, stage, result_json, error, request_hash, epsm_id,
+         footprint_area, floors, created_at, updated_at) = row
+        return EnergyStudyRecord(
+            study_id=sid, status=status, stage=stage,
+            result=json.loads(result_json) if result_json else None,
+            error=error, request_hash=request_hash,
+            epsm_simulation_id=epsm_id, footprint_area=footprint_area,
+            floors=floors, created_at=created_at, updated_at=updated_at,
+        )
+
+    def find_energy_by_request_hash(self, request_hash: str) -> Optional[EnergyStudyRecord]:
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                '''SELECT study_id FROM energy_studies WHERE request_hash = ?
+                   AND (status = 'complete' OR
+                        (status IN ('running', 'queued') AND updated_at >= datetime('now', '-2 hours')))
+                   ORDER BY CASE status WHEN 'complete' THEN 0 WHEN 'running' THEN 1 ELSE 2 END,
+                            rowid DESC LIMIT 1''',
+                (request_hash,),
+            ).fetchone()
+        return self.get_energy(row[0]) if row else None
+
+    def update_energy(self, study_id: str, **kwargs) -> None:
+        if 'result' in kwargs and isinstance(kwargs['result'], dict):
+            kwargs['result'] = json.dumps(kwargs['result'])
+        set_clause = ', '.join(f'{key} = ?' for key in kwargs)
+        values = list(kwargs.values()) + [study_id]
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                f'UPDATE energy_studies SET {set_clause}, updated_at = CURRENT_TIMESTAMP '
+                'WHERE study_id = ?', values
             )
 
 

@@ -14,6 +14,7 @@ import os
 
 from honeybee.model import Model
 from honeybee.room import Room
+from honeybee.shade import Shade
 from honeybee_radiance.sensorgrid import SensorGrid
 from ladybug_geometry.geometry3d.face import Face3D
 from ladybug_geometry.geometry3d.pointvector import Point3D
@@ -103,9 +104,31 @@ def _sensor_grid(room: Room, cfg: dict) -> SensorGrid:
     return grid
 
 
+def _add_context_buildings(model: Model, context_buildings: list[dict]) -> None:
+    """Add each context building as opaque detached shade faces."""
+    for building_index, context in enumerate(context_buildings):
+        coords = list(context['footprint_coordinates'])
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
+
+        height = context['floors'] * context['floor_to_floor_height']
+        points = [Point3D(x, y, 0) for x, y in coords[:-1]]
+        footprint = Face3D(points)
+        prism = Polyface3D.from_offset_face(footprint, height)
+
+        for face_index, face in enumerate(prism.faces):
+            model.add_shade(
+                Shade(
+                    f'ContextBuilding_{building_index}_{face_index}',
+                    face,
+                    is_detached=True
+                )
+            )
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def build_model(cfg: dict) -> tuple[Model, SensorGrid]:
+def build_model(cfg: dict, context_buildings: list[dict] | None = None) -> tuple[Model, SensorGrid]:
     """
     Build and return a (Model, SensorGrid) pair from validated room inputs.
 
@@ -119,6 +142,7 @@ def build_model(cfg: dict) -> tuple[Model, SensorGrid]:
     grid = _sensor_grid(room, cfg)
 
     model = Model('Daylight_Model', rooms=[room])
+    _add_context_buildings(model, context_buildings or [])
     model.properties.radiance.add_sensor_grid(grid)
     return model, grid
 

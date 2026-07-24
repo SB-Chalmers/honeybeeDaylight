@@ -35,6 +35,7 @@ class RoomInput(BaseModel):
         description='Clockwise rotation from north (+Y). 0 = north-aligned.'
     )
     floor_to_floor_height: float = Field(3.2, gt=0)
+    floors: int = Field(1, ge=1)
     selected_floor_number: int = Field(1, ge=1)
 
     # Accept either single float (fans out) or per-cardinal dict.
@@ -93,6 +94,25 @@ class RoomInput(BaseModel):
         return d
 
 
+class ContextBuildingInput(BaseModel):
+    footprint_coordinates: list[list[float]] = Field(
+        ..., min_length=3,
+        description='2-D polygon [[x,y], ...] in metres; auto-closed.'
+    )
+    floors: int = Field(1, ge=1)
+    floor_to_floor_height: float = Field(3.2, gt=0)
+
+    @field_validator('footprint_coordinates')
+    @classmethod
+    def at_least_three_points(cls, v):
+        if len(v) < 3:
+            raise ValueError('footprint_coordinates must have at least 3 points.')
+        for point in v:
+            if len(point) != 2:
+                raise ValueError('Each footprint coordinate must be a 2-D pair: [x, y].')
+        return v
+
+
 # ── Study request ─────────────────────────────────────────────────────────────
 
 class Thresholds(BaseModel):
@@ -102,6 +122,10 @@ class Thresholds(BaseModel):
 
 class StudyRequest(BaseModel):
     room: RoomInput
+    context_buildings: list[ContextBuildingInput] = Field(
+        default_factory=list,
+        description='Other buildings represented as opaque context geometry for this study.'
+    )
     run_sda: bool = False
     location: Optional[str] = Field(
         None,
@@ -109,6 +133,23 @@ class StudyRequest(BaseModel):
     )
     quality: str = Field('draft', pattern='^(draft|full)$')
     thresholds: Thresholds = Field(default_factory=Thresholds)
+
+
+class ConstructionNames(BaseModel):
+    wall: str = Field(..., min_length=1)
+    floor: str = Field(..., min_length=1)
+    roof: str = Field(..., min_length=1)
+    window: str = Field(..., min_length=1)
+
+
+class EnergyRequest(BaseModel):
+    room: RoomInput
+    context_buildings: list[ContextBuildingInput] = Field(default_factory=list)
+    constructions: ConstructionNames
+    building_program: str = 'Office'
+    hvac_system: str = 'Default HVAC'
+    natural_ventilation: bool = False
+    location: str = Field(..., min_length=1)
 
 
 # ── Responses ─────────────────────────────────────────────────────────────────
@@ -165,6 +206,28 @@ class StudyResult(BaseModel):
         default_factory=list,
         description='Sensor coordinates in Honeybee world [x, y, z], ordered to match df.values.'
     )
+
+
+class EnergyQueued(BaseModel):
+    study_id: str
+    status: str
+
+
+class EnergyStatus(BaseModel):
+    study_id: str
+    status: str
+    stage: Optional[str] = None
+    error: Optional[str] = None
+
+
+class EnergyResult(BaseModel):
+    study_id: str
+    status: str
+    heating_energy_kwh: float
+    cooling_energy_kwh: float
+    total_energy_kwh: float
+    heating_demand_kwh_m2: float
+    cooling_demand_kwh_m2: float
 
 
 # ── Locations ─────────────────────────────────────────────────────────────────

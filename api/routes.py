@@ -28,9 +28,15 @@ from fastapi.responses import StreamingResponse
 from simulation.inputs import load_room_inputs, validate_room_inputs
 from simulation.model import build_model
 from simulation.results import parse_annual, parse_df, parse_sensor_points
+from simulation.energy.epsm_client import simulation_results, simulation_status
+from simulation.energy.idf_builder import footprint_area
 
 from .schemas import (
     DfResult,
+    EnergyQueued,
+    EnergyRequest,
+    EnergyResult,
+    EnergyStatus,
     ErrorResponse,
     LocationItem,
     LocationsResponse,
@@ -41,7 +47,7 @@ from .schemas import (
     StudyStatus,
 )
 from .store import store
-from .worker import STUDIES_ROOT, WEATHER_DIR, run_study
+from .worker import STUDIES_ROOT, WEATHER_DIR, run_energy_study, run_study
 
 router = APIRouter(prefix='/v1')
 
@@ -121,10 +127,25 @@ def _request_hash(room_dict: dict, request: StudyRequest) -> str:
     """Create a stable hash for de-duplicating equivalent study requests."""
     payload = {
         'room': room_dict,
+        'context_buildings': [building.model_dump() for building in request.context_buildings],
         'run_sda': request.run_sda,
         'location': request.location,
         'quality': request.quality,
         'thresholds': request.thresholds.model_dump(),
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+    return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+
+def _energy_request_hash(room_dict: dict, request: EnergyRequest) -> str:
+    payload = {
+        'room': room_dict,
+        'context_buildings': [building.model_dump() for building in request.context_buildings],
+        'constructions': request.constructions.model_dump(),
+        'building_program': request.building_program,
+        'hvac_system': request.hvac_system,
+        'natural_ventilation': request.natural_ventilation,
+        'location': request.location,
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(',', ':'))
     return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
@@ -225,6 +246,7 @@ def start_study(request: StudyRequest, background_tasks: BackgroundTasks):
         run_study,
         study_id=study_id,
         room_dict=room_dict,
+        context_buildings=[building.model_dump() for building in request.context_buildings],
         run_sda=request.run_sda,
         location=request.location,
         draft=(request.quality == 'draft'),
@@ -437,6 +459,7 @@ async def run_sync(request: StudyRequest):
                 lambda: run_study(
                     study_id=study_id,
                     room_dict=room_dict,
+                    context_buildings=[building.model_dump() for building in request.context_buildings],
                     run_sda=False,
                     location=None,
                     draft=(request.quality == 'draft'),
@@ -456,6 +479,135 @@ async def run_sync(request: StudyRequest):
     if record.status == 'failed':
         raise HTTPException(status_code=500, detail={'error': 'simulation_failed', 'message': record.error})
     return _to_result_response(study_id, record.result)
+
+
+# ── EnergyPlus / EPSM endpoints ──────────────────────────────────────────────
+
+def _energy_result(record, raw: dict) -> dict:
+    if raw.get('error') or raw.get('error_message'):
+        raise ValueError(raw.get('error_message') or raw.get('error'))
+    floor_area = max(float(record.footprint_area or 0), 1e-9)
+    heating = float(raw.get('heating_energy_kwh', 0) or 0)
+    cooling = float(raw.get('cooling_energy_kwh', 0) or 0)
+    total = float(raw.get('total_energy_kwh', heating + cooling) or 0)
+    return {
+        'study_id': record.study_id,
+        'status': 'complete',
+        'heating_energy_kwh': heating,
+        'cooling_energy_kwh': cooling,
+        'total_energy_kwh': total,
+        'heating_demand_kwh_m2': heating / floor_area,
+        'cooling_demand_kwh_m2': cooling / floor_area,
+    }
+
+
+def _poll_energy_record(record):
+    # Local mode: the background task writes the result directly; nothing to poll.
+    if not record.epsm_simulation_id:
+        return record
+    # EPSM fallback mode: poll the remote service for status updates.
+    if record.status not in ('queued', 'running'):
+        return record
+    epsm = asyncio.run(simulation_status(record.epsm_simulation_id))
+    status = str(epsm.get('status', 'running')).lower()
+    if status in ('completed', 'complete'):
+        raw = asyncio.run(simulation_results(record.epsm_simulation_id))
+        store.update_energy(record.study_id, status='complete', stage=None,
+                            result=_energy_result(record, raw), error=None)
+    elif status in ('failed', 'error'):
+        store.update_energy(record.study_id, status='failed', stage=None,
+                            error=epsm.get('error', 'EPSM simulation failed'))
+    else:
+        store.update_energy(record.study_id, status='running', stage='energyplus_simulation')
+    return store.get_energy(record.study_id)
+
+
+@router.post('/energy/studies', response_model=EnergyQueued, status_code=202)
+def start_energy_study(request: EnergyRequest, background_tasks: BackgroundTasks):
+    room_dict = request.room.to_simulation_dict()
+    req_hash = _energy_request_hash(room_dict, request)
+    try:
+        validate_room_inputs(load_room_inputs(room_dict))
+        area = footprint_area(room_dict['footprint_coordinates']) * request.room.floors
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail={'error': 'invalid_room', 'message': str(exc)})
+
+    cached = store.find_energy_by_request_hash(req_hash)
+    if cached:
+        return EnergyQueued(study_id=cached.study_id, status=cached.status)
+    study_id = f'eng_{uuid.uuid4().hex[:12]}'
+    store.create_energy(study_id, request_hash=req_hash, footprint_area=area,
+                        floors=request.room.floors)
+    background_tasks.add_task(
+        run_energy_study,
+        study_id=study_id,
+        room_dict=room_dict,
+        context_buildings=[building.model_dump() for building in request.context_buildings],
+        constructions=request.constructions.model_dump(),
+        building_program=request.building_program,
+        hvac_system=request.hvac_system,
+        natural_ventilation=request.natural_ventilation,
+        location=request.location,
+    )
+    return EnergyQueued(study_id=study_id, status='queued')
+
+
+@router.get('/energy/studies/{study_id}', response_model=EnergyStatus)
+def get_energy_status(study_id: str):
+    record = store.get_energy(study_id)
+    if not record:
+        raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Energy study {study_id} not found.'})
+    try:
+        record = _poll_energy_record(record)
+    except Exception as exc:
+        store.update_energy(study_id, status='failed', stage=None, error=str(exc))
+        record = store.get_energy(study_id)
+    return EnergyStatus(study_id=record.study_id, status=record.status,
+                        stage=record.stage, error=record.error)
+
+
+@router.get('/energy/studies/{study_id}/result', response_model=EnergyResult)
+def get_energy_result(study_id: str):
+    record = store.get_energy(study_id)
+    if not record:
+        raise HTTPException(status_code=404, detail={'error': 'not_found', 'message': f'Energy study {study_id} not found.'})
+    try:
+        record = _poll_energy_record(record)
+    except Exception as exc:
+        store.update_energy(study_id, status='failed', stage=None, error=str(exc))
+        record = store.get_energy(study_id)
+    if record.status == 'failed':
+        raise HTTPException(status_code=500, detail={'error': 'simulation_failed', 'message': record.error or 'Unknown error.'})
+    if record.status != 'complete' or not record.result:
+        raise HTTPException(status_code=202, detail={'error': 'not_ready', 'message': f'Energy study is {record.status}.'})
+    return EnergyResult.model_validate(record.result)
+
+
+@router.post('/energy/studies:run-sync', response_model=EnergyResult)
+async def run_energy_sync(request: EnergyRequest):
+    room_dict = request.room.to_simulation_dict()
+    area = footprint_area(room_dict['footprint_coordinates']) * request.room.floors
+    study_id = f'eng_{uuid.uuid4().hex[:12]}'
+    store.create_energy(study_id, footprint_area=area, floors=request.room.floors)
+    loop = asyncio.get_running_loop()
+    try:
+        await asyncio.wait_for(loop.run_in_executor(
+            _executor,
+            lambda: run_energy_study(
+                study_id, room_dict,
+                [building.model_dump() for building in request.context_buildings],
+                request.constructions.model_dump(), request.building_program,
+                request.hvac_system, request.natural_ventilation, request.location,
+            ),
+        ), timeout=30.0)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=202, detail={'error': 'timeout', 'message': f'Energy study is still running. Poll /v1/energy/studies/{study_id}.', 'study_id': study_id})
+    record = _poll_energy_record(store.get_energy(study_id))
+    if record.status == 'failed':
+        raise HTTPException(status_code=500, detail={'error': 'simulation_failed', 'message': record.error})
+    if record.status != 'complete':
+        raise HTTPException(status_code=202, detail={'error': 'not_ready', 'message': f'Energy study is {record.status}.'})
+    return EnergyResult.model_validate(record.result)
 
 
 # ── GET /v1/locations ─────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ dragonfly-uwg==0.5.743
 fastapi==0.139.2
 fonttools==4.63.0
 h11==0.16.0
+httpx==0.28.1
 honeybee-core==1.64.60
 honeybee-display==0.6.3
 honeybee-doe2==0.23.6

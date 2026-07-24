@@ -151,6 +151,20 @@ class TestSensorGrid:
         assert grid_coarse.count < grid_fine.count
 
 
+class TestContextBuildings:
+    def test_context_building_is_added_as_detached_shades(self):
+        context = {
+            'footprint_coordinates': [[20, 0], [24, 0], [24, 4], [20, 4]],
+            'floors': 2,
+            'floor_to_floor_height': 3.0,
+        }
+        model, _ = build_model(cfg(), [context])
+
+        assert len(model.rooms) == 1
+        assert len(model.shades) == 6
+        assert all(shade.is_detached for shade in model.shades)
+
+
 # ── Export ────────────────────────────────────────────────────────────────────
 
 class TestExportModel:
