@@ -153,9 +153,34 @@ def build_idf(room: dict, constructions: dict, building_program: str,
 
         # Assign energy properties
         prog_id = _PROGRAM_MAP.get(building_program, 'Generic Office Program')
-        r.properties.energy.program_type = program_type_by_identifier(prog_id)
+        prog = program_type_by_identifier(prog_id).duplicate()
+
+        # When natural ventilation is enabled, raise the cooling setpoint to 50 °C
+        # so the IdealLoads system never activates mechanical cooling — the zone
+        # runs free and any summer overheating is unmet.  Heating is unaffected.
+        if natural_ventilation and prog.setpoint:
+            from honeybee_energy.schedule.ruleset import ScheduleRuleset
+            no_cool_sched = ScheduleRuleset.from_constant_value(
+                f'NoCooling_{floor_idx + 1}', 50.0,
+                prog.setpoint.cooling_schedule.schedule_type_limit
+            )
+            new_setpoint = prog.setpoint.duplicate()
+            new_setpoint.cooling_schedule = no_cool_sched
+            prog.setpoint = new_setpoint
+
+        r.properties.energy.program_type = prog
         r.properties.energy.construction_set = _construction_set_from_epsm(constructions)
-        r.properties.energy.add_default_ideal_air()
+        # Create a fresh IdealAirSystem (not the shared library object, which is locked)
+        # and set NoLimit so EnergyPlus never tries to autosize capacities at runtime.
+        # Autosize + sizing disabled causes a SIGSEGV in EP 24.2 on Linux.
+        # cooling_limit = no_limit requires economizer_type = 'NoEconomizer'.
+        from honeybee_energy.hvac.idealair import IdealAirSystem
+        from honeybee.altnumber import no_limit
+        ideal_air = IdealAirSystem(f'Zone_{floor_idx + 1}_IdealAir')
+        ideal_air.economizer_type = 'NoEconomizer'
+        ideal_air.heating_limit = no_limit
+        ideal_air.cooling_limit = no_limit
+        r.properties.energy.hvac = ideal_air
         all_rooms.append(r)
 
     model = Model('Energy_Model', rooms=all_rooms)
@@ -201,6 +226,29 @@ def build_idf(room: dict, constructions: dict, building_program: str,
         '\nOutput:Meter,\n  DistrictHeating:Building,\n  Annual;\n\n'
         'Output:Meter,\n  DistrictCooling:Building,\n  Annual;\n\n'
         'Output:Meter,\n  Electricity:Building,\n  Annual;\n'
+        # Zone-level monthly variables for the heat balance chart.
+        # Use IdealLoads heating/cooling energy instead of district meters
+        # because the district meters need explicit monthly tracking.
+        '\nOutput:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Monthly;\n'
+        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Monthly;\n'
+        'Output:Variable,*,Zone People Sensible Heating Energy,Monthly;\n'
+        'Output:Variable,*,Zone Lights Electricity Energy,Monthly;\n'
+        'Output:Variable,*,Zone Electric Equipment Electricity Energy,Monthly;\n'
+        'Output:Variable,*,Zone Windows Total Heat Gain Energy,Monthly;\n'
+        'Output:Variable,*,Zone Infiltration Sensible Heat Gain Energy,Monthly;\n'
+        'Output:Variable,*,Zone Infiltration Sensible Heat Loss Energy,Monthly;\n'
+        # Monthly tabular report — months as rows, variables as columns in HTML.
+        '\nOutput:Table:Monthly,\n'
+        '  Monthly Heat Balance,\n'
+        '  2,\n'
+        '  Zone Ideal Loads Supply Air Sensible Heating Energy,SumOrAverage,\n'
+        '  Zone Ideal Loads Supply Air Sensible Cooling Energy,SumOrAverage,\n'
+        '  Zone People Sensible Heating Energy,SumOrAverage,\n'
+        '  Zone Lights Electricity Energy,SumOrAverage,\n'
+        '  Zone Electric Equipment Electricity Energy,SumOrAverage,\n'
+        '  Zone Windows Total Heat Gain Energy,SumOrAverage,\n'
+        '  Zone Infiltration Sensible Heat Gain Energy,SumOrAverage,\n'
+        '  Zone Infiltration Sensible Heat Loss Energy,SumOrAverage;\n'
     )
     idf_text = sim_idf + _extra + '\n' + model_to_idf(model)
     floor_area = footprint_area(room['footprint_coordinates']) * floors

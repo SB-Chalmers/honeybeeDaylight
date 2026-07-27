@@ -6,7 +6,7 @@ Pydantic request and response models for all endpoints.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -228,6 +228,8 @@ class EnergyResult(BaseModel):
     total_energy_kwh: float
     heating_demand_kwh_m2: float
     cooling_demand_kwh_m2: float
+    total_energy_kwh_m2: float
+    monthly_heat_balance: Optional[Dict[str, Any]] = None
 
 
 # ── Locations ─────────────────────────────────────────────────────────────────

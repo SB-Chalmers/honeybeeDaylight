@@ -166,27 +166,137 @@ def _parse_htm(htm_path: Path) -> dict:
         htm_path.read_text(encoding='utf-8', errors='replace'), 'html.parser'
     )
 
-    # Building area and site energy intensity (same as EPSM col indices).
+    # Building area [m²] — col 1 of the Building Area table.
     area = _table_value(soup, 'Building Area', 'Total Building Area', 1)
-    total_intensity = _table_value(soup, 'Site and Source Energy', 'Total Site Energy', 2)
 
-    # ZoneHVAC:IdealLoadsAirSystem reports heating as District Heating and
-    # cooling as District Cooling in the EnergyPlus End Uses summary table.
-    # EPSM's parser uses col 12 for both rows; we try that first and fall back
-    # to col 11 (District Cooling) for the cooling row.
-    heating_kwh = _table_value(soup, 'End Uses', 'Heating', 12)
-    cooling_kwh = _table_value(soup, 'End Uses', 'Cooling', 11)
-    if cooling_kwh is None:
-        cooling_kwh = _table_value(soup, 'End Uses', 'Cooling', 12)
+    # ZoneHVAC:IdealLoadsAirSystem reports heating as District Heating Water
+    # and cooling as District Cooling in the EnergyPlus End Uses summary table.
+    # Col 12 = District Heating Water [GJ], col 11 = District Cooling [GJ].
+    # All End Uses values are in GJ — convert to kWh (1 GJ = 277.778 kWh).
+    GJ_TO_KWH = 277.778
 
-    total_kwh = (
-        total_intensity * area if (total_intensity and area) else
-        (heating_kwh or 0.0) + (cooling_kwh or 0.0)
-    )
+    heating_gj = _table_value(soup, 'End Uses', 'Heating', 12)
+    cooling_gj = _table_value(soup, 'End Uses', 'Cooling', 11)
+    if cooling_gj is None:
+        cooling_gj = _table_value(soup, 'End Uses', 'Cooling', 12)
+
+    heating_kwh = (heating_gj or 0.0) * GJ_TO_KWH
+    cooling_kwh = (cooling_gj or 0.0) * GJ_TO_KWH
+
+    # Total Site Energy [GJ] is col 1 of the Site and Source Energy table.
+    # This includes all end uses (lighting, equipment, HVAC), not just HVAC.
+    total_gj = _table_value(soup, 'Site and Source Energy', 'Total Site Energy', 1)
+    total_kwh = (total_gj * GJ_TO_KWH) if total_gj else (heating_kwh + cooling_kwh)
+
+    # Monthly heat balance from Output:Table:Monthly
+    monthly = _parse_monthly_balance(soup, area or 1.0)
 
     return {
-        'heating_energy_kwh': round(heating_kwh or 0.0, 1),
-        'cooling_energy_kwh': round(cooling_kwh or 0.0, 1),
-        'total_energy_kwh': round(total_kwh or 0.0, 1),
+        'heating_energy_kwh': round(heating_kwh, 1),
+        'cooling_energy_kwh': round(cooling_kwh, 1),
+        'total_energy_kwh': round(total_kwh, 1),
         'floor_area_m2': round(area or 0.0, 1),
+        'monthly_heat_balance': monthly,
     }
+
+
+# ---------------------------------------------------------------------------
+# Monthly heat balance parser (Output:Table:Monthly → heat balance chart)
+# ---------------------------------------------------------------------------
+
+_MONTHS_LONG  = ['January','February','March','April','May','June',
+                 'July','August','September','October','November','December']
+_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun',
+                 'Jul','Aug','Sep','Oct','Nov','Dec']
+
+# Maps uppercase substrings in column headers to component keys.
+# Order matters: more specific patterns first.
+_COL_PATTERNS = [
+    ('ZONE IDEAL LOADS SUPPLY AIR SENSIBLE HEATING', 'heating'),
+    ('ZONE IDEAL LOADS SUPPLY AIR SENSIBLE COOLING', 'cooling'),
+    ('ZONE PEOPLE SENSIBLE HEATING',                 'people'),
+    ('ZONE LIGHTS ELECTRICITY',                      'lighting'),
+    ('ZONE ELECTRIC EQUIPMENT ELECTRICITY',          'equipment'),
+    ('ZONE WINDOWS TOTAL HEAT GAIN',                 'solar'),
+    ('ZONE INFILTRATION SENSIBLE HEAT GAIN',         'infiltration_gain'),
+    ('ZONE INFILTRATION SENSIBLE HEAT LOSS',         'infiltration_loss'),
+]
+
+
+def _parse_monthly_balance(soup, floor_area_m2: float) -> dict | None:
+    """Parse all 'Custom Monthly Report' tables produced by Output:Table:Monthly.
+
+    EnergyPlus emits one table per zone keyname.  The table is transposed:
+    rows = months (January … December + Annual/Min/Max), columns = variables.
+    Zone-level variables are summed across all zone tables; building-level
+    variables use max() to avoid double-counting identical values.
+    Values with empty units '[]' are not tracked — skip them.
+    """
+    aggregated: dict[str, list[float]] = {}
+
+    for b_tag in soup.find_all('b', string='Custom Monthly Report'):
+        tbl = b_tag.find_next('table')
+        if not tbl:
+            continue
+        rows = tbl.find_all('tr')
+        if len(rows) < 2:
+            continue
+
+        # --- Header: map column index → (component_key, J→kWh factor) ---
+        hdr_cells = rows[0].find_all(['td', 'th'])
+        col_map: dict[int, tuple[str, float]] = {}
+        for ci, cell in enumerate(hdr_cells[1:], 1):
+            text = cell.get_text(strip=True).upper()
+            # Skip untracked columns (empty units means EnergyPlus found no data)
+            if '[J]' in text:
+                factor = 1.0 / 3_600_000     # J → kWh
+            elif '[GJ]' in text:
+                factor = 277.778
+            elif '[MJ]' in text:
+                factor = 0.2778
+            else:
+                continue  # '[]' or no unit = variable not tracked
+            for pattern, key in _COL_PATTERNS:
+                if pattern in text:
+                    col_map[ci] = (key, factor)
+                    break
+
+        if not col_map:
+            continue
+
+        # --- Data rows: each row is one month ---
+        for row in rows[1:]:
+            cells = row.find_all('td')
+            if not cells:
+                continue
+            label = cells[0].get_text(strip=True)
+            month_idx = next(
+                (i for i, m in enumerate(_MONTHS_LONG) if m.lower() == label.lower()),
+                -1
+            )
+            if month_idx < 0:
+                continue
+
+            for ci, (key, factor) in col_map.items():
+                if ci >= len(cells):
+                    continue
+                try:
+                    val_kwh = float(cells[ci].get_text(strip=True)) * factor
+                except (ValueError, TypeError):
+                    val_kwh = 0.0
+
+                if key not in aggregated:
+                    aggregated[key] = [0.0] * 12
+
+                # Heating and cooling from IdealLoads appear once per zone;
+                # sum across zones to get building total.
+                aggregated[key][month_idx] += val_kwh
+
+    if not aggregated:
+        return None
+
+    fa = max(floor_area_m2, 1.0)
+    result: dict = {'months': _MONTHS_SHORT}
+    for k, vals in aggregated.items():
+        result[k] = [round(v / fa, 4) for v in vals]
+    return result

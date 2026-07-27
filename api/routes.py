@@ -498,6 +498,8 @@ def _energy_result(record, raw: dict) -> dict:
         'total_energy_kwh': total,
         'heating_demand_kwh_m2': heating / floor_area,
         'cooling_demand_kwh_m2': cooling / floor_area,
+        'total_energy_kwh_m2': total / floor_area,
+        'monthly_heat_balance': raw.get('monthly_heat_balance'),
     }
 
 
@@ -580,7 +582,7 @@ def get_energy_result(study_id: str):
         raise HTTPException(status_code=500, detail={'error': 'simulation_failed', 'message': record.error or 'Unknown error.'})
     if record.status != 'complete' or not record.result:
         raise HTTPException(status_code=202, detail={'error': 'not_ready', 'message': f'Energy study is {record.status}.'})
-    return EnergyResult.model_validate(record.result)
+    return EnergyResult.model_validate(_energy_result(record, record.result))
 
 
 @router.post('/energy/studies:run-sync', response_model=EnergyResult)
