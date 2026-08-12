@@ -38,7 +38,7 @@ Students use a separate design app to describe a building and submit it to this 
 
 ## Goal
 Turn the Honeybee/Foton daylight workflow into a simple web API where a client can:
-1. Send room inputs: footprint coordinates, orientation offset (defaults to north), floor-to-floor height, WWR per cardinal direction, selected floor number for simulation, sensor grid config (optional, defaulting to 0.5 m × 0.5 m grid), wall thickness (drives overhang + fin shading depth), optional additional horizontal shading depth, optional additional vertical shading depth.
+1. Send room inputs: footprint coordinates, orientation offset (defaults to north), floor-to-floor height, WWR per cardinal direction, selected floor number for simulation, sensor grid config (optional, defaulting to 0.3 m × 0.3 m grid), wall thickness (drives overhang + fin shading depth), optional additional horizontal shading depth, optional additional vertical shading depth.
 2. Run a daylight study: DF or sDA.
 3. Receive a plottable response.
 
@@ -81,7 +81,7 @@ Request:
     "wall_thickness": 0.30,
     "additional_horizontal_shading_depth": 0.00,
     "additional_vertical_shading_depth": 0.00,
-    "sensor_grid": { "x_dim": 0.5, "y_dim": 0.5, "offset": 0.75 }
+    "sensor_grid": { "x_dim": 0.3, "y_dim": 0.3, "offset": 0.75 }
   }
 }
 ```
@@ -201,7 +201,7 @@ HTTP status codes: `400` validation, `404` study not found, `422` schema error, 
 - Shading is skipped on a face if its resolved depth is 0
 
 3. Grid conventions
-- Sensor spacing: `x_dim`, `y_dim` (default 0.5 m)
+- Sensor spacing: `x_dim`, `y_dim` (default 0.3 m)
 - Sensor offset from floor: `offset` (default 0.75 m)
 - Grid falls back to script defaults if `sensor_grid` key is omitted
 

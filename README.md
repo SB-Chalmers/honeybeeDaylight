@@ -5,7 +5,7 @@
 ![Foton](https://img.shields.io/badge/Foton-0.2.0-blueviolet)
 ![Honeybee](https://img.shields.io/badge/Honeybee-models-yellow?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PC9zdmc+)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen?logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-65%20passing-brightgreen?logo=pytest&logoColor=white)
 
 A teaching tool that accepts a building description and returns daylight simulation results (Daylight Factor and spatial Daylight Autonomy) via a REST API. Built with [Honeybee](https://www.ladybug.tools/honeybee.html) + [Foton](https://github.com/snjsomnath/foton) + [FastAPI](https://fastapi.tiangolo.com/).
 
@@ -144,25 +144,32 @@ Three directories are mounted as Docker volumes. They persist across container r
 | `POST` | `/v1/studies` | Submit a target building plus optional context buildings + start study |
 | `GET` | `/v1/studies/{id}` | Poll study status |
 | `GET` | `/v1/studies/{id}/result` | Fetch plottable results |
+| `GET` | `/v1/studies/{id}/model.hbjson` | Download the generated Honeybee model |
 | `POST` | `/v1/studies:run-sync` | DF only, returns results directly |
 | `GET` | `/v1/locations` | List available weather locations |
 
 Full request/response schemas at `/docs`.
 
-### Multi-building context
+### Multi-floor target buildings and context
 
-The API runs one target-room study at a time. To analyze a site with multiple
-buildings, submit one request per target building in parallel. Put every other
-building in that request's `context_buildings` array. Context buildings are
-exported as opaque detached geometry, so they can shade the target building
-without receiving sensor grids or their own daylight results.
+By default, the API creates one stacked Honeybee Room and one SensorGrid for
+every target-building floor. Results remain flat ordered point-cloud arrays;
+`sensor_grids` identifies each floor's `start_sensor_index` and `sensor_count`.
+Set `simulate_all_floors` to `false` to retain the legacy selected-floor mode.
+
+To analyze a site with multiple buildings, submit one request per target
+building in parallel. Put every other building in that request's
+`context_buildings` array. Context buildings are exported as opaque detached
+geometry, so they can shade the target without receiving sensor grids.
 
 ```json
 {
     "room": {
         "footprint_coordinates": [[0,0],[6,0],[6,5],[0,5]],
         "floor_to_floor_height": 3.0,
-        "selected_floor_number": 1
+        "floors": 4,
+        "simulate_all_floors": true,
+        "selected_floor_number": 4
     },
     "context_buildings": [
         {
@@ -172,7 +179,7 @@ without receiving sensor grids or their own daylight results.
         }
     ],
     "run_sda": false,
-    "quality": "draft"
+    "quality": "full"
 }
 ```
 
@@ -223,3 +230,7 @@ curl -I http://127.0.0.1:8000/docs
 > needs Radiance `gendaymtx` for EPW/WEA sky-matrix preparation; daylight
 > transport and metric reduction are performed by Foton. The Docker image
 > provides `gendaymtx` automatically.
+>
+> API daylight studies use Foton's final-quality solver settings with the
+> 146-patch Tregenza sky basis. The legacy `quality: "draft"` request value is
+> still accepted for client compatibility but no longer lowers solver quality.

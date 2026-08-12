@@ -1,7 +1,7 @@
 """
 simulation.model
 ────────────────
-Build a Honeybee Model + SensorGrid from validated room inputs.
+Build a Honeybee Model with one or more SensorGrids from validated inputs.
 
 Public API
 ----------
@@ -23,6 +23,18 @@ from ladybug_geometry.geometry3d.polyface import Polyface3D
 from .inputs import GRID_DIM
 
 
+class SensorGridCollection(tuple):
+    """Floor-ordered SensorGrids with aggregate legacy-compatible properties."""
+
+    @property
+    def count(self) -> int:
+        return sum(grid.count for grid in self)
+
+    @property
+    def sensors(self) -> tuple:
+        return tuple(sensor for grid in self for sensor in grid.sensors)
+
+
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _cardinal_from_normal(normal) -> str:
@@ -32,17 +44,17 @@ def _cardinal_from_normal(normal) -> str:
     return min(cardinals, key=lambda c: min((azimuth - c[1]) % 360, (c[1] - azimuth) % 360))[0]
 
 
-def _room_from_footprint(cfg: dict) -> Room:
+def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
     coords = list(cfg['footprint_coordinates'])
     if coords[0] != coords[-1]:
         coords.append(coords[0])
 
-    floor_z = (cfg['selected_floor_number'] - 1) * cfg['floor_to_floor_height']
+    floor_z = (floor_number - 1) * cfg['floor_to_floor_height']
     points = [Point3D(x, y, floor_z) for x, y in coords[:-1]]
     floor_face = Face3D(points)
     rotated = floor_face.rotate_xy(math.radians(cfg['orientation_offset']), Point3D(0, 0, floor_z))
     polyface = Polyface3D.from_offset_face(rotated, cfg['floor_to_floor_height'])
-    return Room.from_polyface3d('Daylight_Room', polyface)
+    return Room.from_polyface3d(identifier, polyface)
 
 
 def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
@@ -90,10 +102,10 @@ def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
 
 
 
-def _sensor_grid(room: Room, cfg: dict) -> SensorGrid:
+def _sensor_grid(room: Room, cfg: dict, identifier: str) -> SensorGrid:
     g = cfg.get('sensor_grid') or {}
     grid = SensorGrid.from_face3d(
-        'floor_grid',
+        identifier,
         [room[0].geometry],
         x_dim=g.get('x_dim', GRID_DIM),
         y_dim=g.get('y_dim', GRID_DIM),
@@ -128,7 +140,7 @@ def _add_context_buildings(model: Model, context_buildings: list[dict]) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def build_model(cfg: dict, context_buildings: list[dict] | None = None) -> tuple[Model, SensorGrid]:
+def build_model(cfg: dict, context_buildings: list[dict] | None = None):
     """
     Build and return a (Model, SensorGrid) pair from validated room inputs.
 
@@ -137,14 +149,35 @@ def build_model(cfg: dict, context_buildings: list[dict] | None = None) -> tuple
     cfg : dict
         Validated room inputs (output of inputs.load_room_inputs).
     """
-    room = _room_from_footprint(cfg)
-    _apply_wwr_and_shading(room, cfg)
-    grid = _sensor_grid(room, cfg)
+    all_floors = bool(cfg.get('simulate_all_floors', False))
+    floor_count = int(cfg.get('floors', 1))
+    floor_numbers = (
+        range(1, floor_count + 1)
+        if all_floors
+        else (int(cfg['selected_floor_number']),)
+    )
+    identifier_width = max(2, len(str(floor_count)))
+    rooms = []
+    grids = []
+    for floor_number in floor_numbers:
+        suffix = f'{floor_number:0{identifier_width}d}'
+        room_identifier = (
+            f'Daylight_Room_Floor_{suffix}' if all_floors else 'Daylight_Room'
+        )
+        grid_identifier = f'floor_{suffix}_grid' if all_floors else 'floor_grid'
+        room = _room_from_footprint(cfg, floor_number, room_identifier)
+        _apply_wwr_and_shading(room, cfg)
+        rooms.append(room)
+        grids.append(_sensor_grid(room, cfg, grid_identifier))
 
-    model = Model('Daylight_Model', rooms=[room])
+    if all_floors and len(rooms) > 1:
+        Room.solve_adjacency(rooms)
+
+    model = Model('Daylight_Model', rooms=rooms)
     _add_context_buildings(model, context_buildings or [])
-    model.properties.radiance.add_sensor_grid(grid)
-    return model, grid
+    for grid in grids:
+        model.properties.radiance.add_sensor_grid(grid)
+    return model, SensorGridCollection(grids) if all_floors else grids[0]
 
 
 def export_model(model: Model, folder: str) -> str:

@@ -5,8 +5,9 @@ All v1 endpoints:
   POST   /v1/studies
   GET    /v1/studies/{study_id}
   GET    /v1/studies/{study_id}/result
-    GET    /v1/studies/{study_id}/logs
-    GET    /v1/studies/{study_id}/events
+  GET    /v1/studies/{study_id}/model.hbjson
+  GET    /v1/studies/{study_id}/logs
+  GET    /v1/studies/{study_id}/events
   POST   /v1/studies:run-sync
   GET    /v1/locations
 """
@@ -20,14 +21,21 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from simulation.inputs import load_room_inputs, validate_room_inputs
 from simulation.model import build_model
-from simulation.results import parse_annual, parse_df, parse_sensor_points
+from simulation.results import (
+    parse_annual,
+    parse_df,
+    parse_sensor_grids,
+    parse_sensor_points,
+)
+from simulation.runner import DAYLIGHT_SOLVER_PROFILE
 from simulation.energy.epsm_client import simulation_results, simulation_status
 from simulation.energy.idf_builder import footprint_area
 
@@ -69,6 +77,7 @@ def _study_links(study_id: str) -> dict:
     return {
         'status': f'/v1/studies/{study_id}',
         'result': f'/v1/studies/{study_id}/result',
+        'hbjson': f'/v1/studies/{study_id}/model.hbjson',
     }
 
 
@@ -76,6 +85,7 @@ def _to_result_response(study_id: str, data: dict) -> StudyResult:
     df_data = data['df']
     sda_data = data.get('sda')
     sensor_points = data.get('sensor_points', [])
+    sensor_grids = data.get('sensor_grids', [])
 
     # Backward compatibility: older completed records may not store sensor_points.
     if not sensor_points:
@@ -95,7 +105,18 @@ def _to_result_response(study_id: str, data: dict) -> StudyResult:
             'values':  sda_data['values'],
             'pass':    sda_data['pass'],
         })
-    return StudyResult(study_id=study_id, df=df, sda=sda, sensor_points=sensor_points)
+    if not sensor_grids:
+        try:
+            sensor_grids = parse_sensor_grids(os.path.join(STUDIES_ROOT, study_id))
+        except Exception:
+            sensor_grids = []
+    return StudyResult(
+        study_id=study_id,
+        df=df,
+        sda=sda,
+        sensor_points=sensor_points,
+        sensor_grids=sensor_grids,
+    )
 
 
 def _study_log_files(study_id: str) -> list[tuple[str, str]]:
@@ -126,6 +147,7 @@ def _sse(event: str, payload: dict) -> str:
 def _request_hash(room_dict: dict, request: StudyRequest) -> str:
     """Create a stable hash for de-duplicating equivalent study requests."""
     payload = {
+        'solver_profile': DAYLIGHT_SOLVER_PROFILE,
         'room': room_dict,
         'context_buildings': [building.model_dump() for building in request.context_buildings],
         'run_sda': request.run_sda,
@@ -174,8 +196,8 @@ def _is_stale_running(record) -> bool:
 def _recover_if_outputs_exist(study_id: str) -> bool:
     """If outputs exist on disk for a stale record, synthesize and persist final result."""
     project_folder = os.path.join(STUDIES_ROOT, study_id)
-    df_path = os.path.join(project_folder, 'daylight_factor', 'results', 'floor_grid.res')
-    if not os.path.isfile(df_path):
+    df_results = Path(project_folder) / 'daylight_factor' / 'results'
+    if not df_results.is_dir() or not any(df_results.glob('*.res')):
         return False
 
     try:
@@ -183,8 +205,8 @@ def _recover_if_outputs_exist(study_id: str) -> bool:
         sensor_points = parse_sensor_points(project_folder)
 
         sda_result = None
-        annual_da = os.path.join(project_folder, 'annual_daylight', 'metrics', 'da', 'floor_grid.da')
-        if os.path.isfile(annual_da):
+        annual_da = Path(project_folder) / 'annual_daylight' / 'metrics' / 'da'
+        if annual_da.is_dir() and any(annual_da.glob('*.da')):
             # Defaults match API defaults when thresholds are not custom-provided.
             sda_result = parse_annual(project_folder)
 
@@ -196,6 +218,7 @@ def _recover_if_outputs_exist(study_id: str) -> bool:
                 'df': df_result,
                 'sda': sda_result,
                 'sensor_points': sensor_points,
+                'sensor_grids': parse_sensor_grids(project_folder),
             },
             error=None,
         )
@@ -311,6 +334,64 @@ def get_result(study_id: str):
     if record.status != 'complete':
         raise HTTPException(status_code=202, detail={'error': 'not_ready', 'message': f'Study is {record.status}.'})
     return _to_result_response(study_id, record.result)
+
+
+# ── GET /v1/studies/{study_id}/model.hbjson ──────────────────────────────────
+
+@router.get(
+    '/studies/{study_id}/model.hbjson',
+    response_class=FileResponse,
+    responses={
+        200: {
+            'content': {'application/json': {}},
+            'description': 'Generated Honeybee model as an HBJSON attachment.',
+        },
+        404: {'model': ErrorResponse},
+        409: {'model': ErrorResponse},
+    },
+)
+def download_hbjson(study_id: str):
+    """Download the Honeybee model generated for a daylight study."""
+    record = store.get(study_id)
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail={'error': 'not_found', 'message': f'Study {study_id} not found.'},
+        )
+
+    studies_root = Path(STUDIES_ROOT).resolve()
+    model_path = (studies_root / study_id / 'model.hbjson').resolve()
+    try:
+        model_path.relative_to(studies_root)
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail={'error': 'not_found', 'message': f'Study {study_id} not found.'},
+        )
+
+    if not model_path.is_file():
+        if record.status in ('queued', 'running'):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    'error': 'model_not_ready',
+                    'message': f'HBJSON for study {study_id} has not been generated yet.',
+                },
+            )
+        raise HTTPException(
+            status_code=404,
+            detail={
+                'error': 'model_not_found',
+                'message': f'HBJSON for study {study_id} is unavailable.',
+            },
+        )
+
+    return FileResponse(
+        path=model_path,
+        media_type='application/json',
+        filename=f'{study_id}.hbjson',
+        headers={'Cache-Control': 'private, no-store'},
+    )
 
 
 # ── GET /v1/studies/{study_id}/logs ──────────────────────────────────────────

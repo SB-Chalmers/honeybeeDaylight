@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 
 import numpy as np
 from foton import Engine
@@ -17,21 +18,16 @@ from foton.honeybee import run_annual_daylight
 from foton.honeybee.adapter import prepare_honeybee_scene
 
 
-DF_QUALITY = {
-    True: {
-        'quality': 'preview',
-        'sky_rows': 146,
-        'direct_samples': 1,
-        'maximum_samples': 64,
-        'maximum_bounces': 1,
-    },
-    False: {
-        'quality': 'final',
-        'sky_rows': 578,
-        'direct_samples': 64,
-        'maximum_samples': 4096,
-        'maximum_bounces': 2,
-    },
+DAYLIGHT_SOLVER_PROFILE = 'foton-0.2-final-tregenza-multifloor-v2'
+
+FINAL_TREGENZA = {
+    'quality': 'final',
+    'sky_basis': 'tregenza',
+    'sky_rows': 146,
+    'sky_density': 1,
+    'direct_samples': 64,
+    'maximum_samples': 4096,
+    'maximum_bounces': 1,
 }
 
 
@@ -66,9 +62,34 @@ def _write_sensor_points(prepared, output_folder: Path) -> None:
         )
 
 
+def _grid_manifest(prepared) -> list[dict]:
+    """Describe each grid's slice in Foton's preserved sensor order."""
+    room_by_id = {value: key for key, value in prepared.room_map.items()}
+    manifest = []
+    for grid in prepared.grid_info:
+        room_ids = list(grid.get('room_ids', ()))
+        room_identifier = (
+            room_by_id.get(room_ids[0], '') if len(room_ids) == 1 else ''
+        )
+        match = re.search(r'_Floor_(\d+)$', room_identifier)
+        manifest.append({
+            'identifier': grid['identifier'],
+            'full_identifier': grid['full_identifier'],
+            'room_identifier': room_identifier,
+            'floor_number': int(match.group(1)) if match else None,
+            'start_sensor_index': int(grid['start_sensor_index']),
+            'sensor_count': int(grid['sensor_count']),
+        })
+    return manifest
+
+
 def run_df(model_path: str, project_folder: str, sensor_count: int,
            *, draft: bool = True) -> None:
-    """Run daylight factor natively with Foton and write compatible results."""
+    """Run final-quality Tregenza DF and write index-compatible results.
+
+    ``draft`` remains in the signature for compatibility with existing API
+    callers but Foton always uses the final-quality preset.
+    """
     output = Path(project_folder).resolve() / 'daylight_factor'
     results_folder = output / 'results'
     results_folder.mkdir(parents=True, exist_ok=True)
@@ -82,7 +103,7 @@ def run_df(model_path: str, project_folder: str, sensor_count: int,
 
     engine = Engine({'backend': _backend()})
     scene = prepared.create_native_scene(engine)
-    settings = DF_QUALITY[draft]
+    settings = FINAL_TREGENZA
 
     # DF is evaluated against Foton's normalized CIE overcast sky. The sky
     # values passed here establish only the patch basis and timestep count.
@@ -113,10 +134,15 @@ def run_df(model_path: str, project_folder: str, sensor_count: int,
         )
 
     _write_sensor_points(prepared, output)
+    (output / 'grids_info.json').write_text(
+        json.dumps(_grid_manifest(prepared), indent=2),
+        encoding='utf-8',
+    )
     metadata = {
         'engine': 'foton',
         'backend': dict(engine.capabilities()),
         'quality': settings,
+        'requested_api_quality': 'draft' if draft else 'full',
         'solver': json.loads(result.metadata_json()),
         'timings': dict(result.timings()),
     }
@@ -129,13 +155,17 @@ def run_df(model_path: str, project_folder: str, sensor_count: int,
 def run_annual(model_path: str, project_folder: str, sensor_count: int,
                wea_path: str, *, draft: bool = True, da_lux: int = 300,
                sda_target_pct: float = 50.0) -> None:
-    """Run annual daylight with Foton and write Honeybee-compatible metrics."""
+    """Run final-quality Tregenza annual daylight with Foton."""
     run = run_annual_daylight(
         model=model_path,
         wea=wea_path,
         output_folder=Path(project_folder).resolve() / 'annual_daylight',
         backend=_backend(),
-        quality='preview' if draft else 'final',
+        quality=FINAL_TREGENZA['quality'],
+        sky_density=FINAL_TREGENZA['sky_density'],
+        direct_samples=FINAL_TREGENZA['direct_samples'],
+        maximum_samples=FINAL_TREGENZA['maximum_samples'],
+        maximum_bounces=FINAL_TREGENZA['maximum_bounces'],
         threshold=float(da_lux),
         target_time=float(sda_target_pct),
         export_illuminance=False,

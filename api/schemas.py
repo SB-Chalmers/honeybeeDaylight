@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field, field_validator
 # ── Room input ────────────────────────────────────────────────────────────────
 
 class SensorGridConfig(BaseModel):
-    x_dim: float = 0.5
-    y_dim: float = 0.5
+    x_dim: float = 0.3
+    y_dim: float = 0.3
     offset: float = 0.75
 
 
@@ -37,6 +37,10 @@ class RoomInput(BaseModel):
     floor_to_floor_height: float = Field(3.2, gt=0)
     floors: int = Field(1, ge=1)
     selected_floor_number: int = Field(1, ge=1)
+    simulate_all_floors: bool = Field(
+        True,
+        description='Generate and sensor one Honeybee Room per building floor.',
+    )
 
     # Accept either single float (fans out) or per-cardinal dict.
     wwr: Optional[float] = Field(
@@ -131,7 +135,7 @@ class StudyRequest(BaseModel):
         None,
         description='Server-side EPW location name. Required when run_sda=true.'
     )
-    quality: str = Field('draft', pattern='^(draft|full)$')
+    quality: str = Field('full', pattern='^(draft|full)$')
     thresholds: Thresholds = Field(default_factory=Thresholds)
 
 
@@ -157,6 +161,7 @@ class EnergyRequest(BaseModel):
 class StudyLinks(BaseModel):
     status: str
     result: str
+    hbjson: str
 
 
 class StudyQueued(BaseModel):
@@ -198,6 +203,15 @@ class SdaResult(BaseModel):
     model_config = {'populate_by_name': True}
 
 
+class SensorGridResultInfo(BaseModel):
+    identifier: str
+    full_identifier: str
+    room_identifier: str = ''
+    floor_number: Optional[int] = None
+    start_sensor_index: int
+    sensor_count: int
+
+
 class StudyResult(BaseModel):
     study_id: str
     df: DfResult
@@ -205,6 +219,10 @@ class StudyResult(BaseModel):
     sensor_points: list[list[float]] = Field(
         default_factory=list,
         description='Sensor coordinates in Honeybee world [x, y, z], ordered to match df.values.'
+    )
+    sensor_grids: list[SensorGridResultInfo] = Field(
+        default_factory=list,
+        description='Ordered slices locating each floor grid in the flattened result arrays.',
     )
 
 

@@ -33,6 +33,12 @@ MINIMAL = {
 # ── load_room_inputs ──────────────────────────────────────────────────────────
 
 class TestLoadFromDict:
+    def test_sensor_grid_defaults_to_300_mm_spacing(self):
+        cfg = load_room_inputs({})
+        assert GRID_DIM == 0.3
+        assert cfg['sensor_grid']['x_dim'] == 0.3
+        assert cfg['sensor_grid']['y_dim'] == 0.3
+
     def test_returns_merged_dict(self):
         cfg = load_room_inputs({'footprint_coordinates': [[0,0],[5,0],[5,5],[0,5]]})
         assert cfg['floor_to_floor_height'] == DEFAULT_ROOM_INPUTS['floor_to_floor_height']
@@ -119,6 +125,10 @@ class TestValidate:
     def test_floor_number_zero_raises(self):
         with pytest.raises(ValueError, match='selected_floor_number'):
             validate_room_inputs(self._valid(selected_floor_number=0))
+
+    def test_zero_floors_raises(self):
+        with pytest.raises(ValueError, match='floors'):
+            validate_room_inputs(self._valid(floors=0, simulate_all_floors=True))
 
     def test_negative_floor_height_raises(self):
         with pytest.raises(ValueError, match='floor_to_floor_height'):

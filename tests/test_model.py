@@ -72,6 +72,43 @@ class TestRoomGeometry:
         zs = [v.z for f in room.faces for v in f.vertices]
         assert abs(max(zs) - min(zs) - h) < 1e-4
 
+    def test_all_floor_mode_builds_and_sensors_every_floor(self):
+        model, grids = build_model(cfg(
+            floors=3,
+            simulate_all_floors=True,
+            floor_to_floor_height=3.0,
+        ))
+
+        assert len(model.rooms) == 3
+        assert len(grids) == 3
+        assert [room.identifier for room in model.rooms] == [
+            'Daylight_Room_Floor_01',
+            'Daylight_Room_Floor_02',
+            'Daylight_Room_Floor_03',
+        ]
+        assert [grid.identifier for grid in grids] == [
+            'floor_01_grid', 'floor_02_grid', 'floor_03_grid'
+        ]
+        assert [grid.room_identifier for grid in grids] == [
+            room.identifier for room in model.rooms
+        ]
+        assert len(model.properties.radiance.sensor_grids) == 3
+        assert [min(sensor.pos[2] for sensor in grid.sensors) for grid in grids] == [
+            pytest.approx(0.75),
+            pytest.approx(3.75),
+            pytest.approx(6.75),
+        ]
+
+    def test_all_floor_mode_solves_vertical_adjacency(self):
+        model, _ = build_model(cfg(floors=2, simulate_all_floors=True))
+        surface_faces = [
+            face
+            for room in model.rooms
+            for face in room.faces
+            if face.boundary_condition.__class__.__name__ == 'Surface'
+        ]
+        assert len(surface_faces) == 2
+
 
 # ── Orientation ───────────────────────────────────────────────────────────────
 

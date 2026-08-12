@@ -16,7 +16,7 @@ import os
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
-GRID_DIM = 0.5  # fallback sensor spacing (m)
+GRID_DIM = 0.3  # fallback sensor spacing (m)
 
 DEFAULT_ROOM_INPUTS = {
     # 2-D footprint polygon; auto-closed if last point ≠ first.
@@ -29,8 +29,11 @@ DEFAULT_ROOM_INPUTS = {
     # 0° = north (+Y in Ladybug Tools); positive values rotate clockwise.
     'orientation_offset': 0.0,
     'floor_to_floor_height': 3.2,
+    'floors': 1,
     # 1-based; floor elevation = (selected_floor_number - 1) × floor_to_floor_height
     'selected_floor_number': 1,
+    # When true, generate one Room and SensorGrid for every floor.
+    'simulate_all_floors': False,
     # Per-cardinal WWR in [0, 1]. Use 'wwr' shorthand to set all four at once.
     'wwr_by_cardinal': {
         'north': 0.40,
@@ -40,8 +43,8 @@ DEFAULT_ROOM_INPUTS = {
     },
     # Sensor grid; omit to use GRID_DIM defaults.
     'sensor_grid': {
-        'x_dim': 0.5,
-        'y_dim': 0.5,
+        'x_dim': 0.3,
+        'y_dim': 0.3,
         'offset': 0.75,
     },
     # Wall thickness is the baseline shading depth for overhang + fins.
@@ -126,6 +129,8 @@ def load_room_inputs(source, key: str = 'room_inputs') -> dict:
 
 def validate_room_inputs(cfg: dict) -> None:
     """Raise ValueError if cfg contains invalid room parameters."""
+    if cfg.get('floors', 1) < 1:
+        raise ValueError('floors must be >= 1.')
     if cfg['selected_floor_number'] < 1:
         raise ValueError('selected_floor_number must be >= 1.')
     if cfg['floor_to_floor_height'] <= 0:

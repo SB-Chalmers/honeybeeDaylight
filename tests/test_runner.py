@@ -1,10 +1,11 @@
 """Tests for the Foton daylight runner."""
 
+import json
 from types import SimpleNamespace
 
 from simulation.inputs import load_room_inputs
 from simulation.model import build_model, export_model
-from simulation.results import parse_df, parse_sensor_points
+from simulation.results import parse_df, parse_sensor_grids, parse_sensor_points
 from simulation import runner
 
 
@@ -35,6 +36,12 @@ def test_run_df_writes_api_compatible_outputs(tmp_path, monkeypatch):
     assert len(points) == sensor_count
     assert result['summary']['min_df'] >= 0
     assert (tmp_path / 'daylight_factor' / 'metadata.json').is_file()
+    metadata = json.loads(
+        (tmp_path / 'daylight_factor' / 'metadata.json').read_text()
+    )
+    assert metadata['quality']['quality'] == 'final'
+    assert metadata['quality']['sky_basis'] == 'tregenza'
+    assert metadata['quality']['sky_rows'] == 146
 
 
 def test_run_annual_forwards_foton_quality_and_thresholds(tmp_path, monkeypatch):
@@ -59,6 +66,10 @@ def test_run_annual_forwards_foton_quality_and_thresholds(tmp_path, monkeypatch)
 
     assert captured['backend'] == 'reference'
     assert captured['quality'] == 'final'
+    assert captured['sky_density'] == 1
+    assert captured['direct_samples'] == 64
+    assert captured['maximum_samples'] == 4096
+    assert captured['maximum_bounces'] == 1
     assert captured['threshold'] == 500.0
     assert captured['target_time'] == 60.0
     assert captured['output_folder'] == tmp_path / 'annual_daylight'
@@ -78,3 +89,27 @@ def test_run_annual_rejects_changed_sensor_count(tmp_path, monkeypatch):
         assert 'prepared 3 sensors' in str(error)
     else:
         raise AssertionError('sensor-count mismatch should fail')
+
+
+def test_run_df_flattens_multiple_floor_grids_in_manifest_order(tmp_path, monkeypatch):
+    cfg = load_room_inputs({
+        'footprint_coordinates': [[0, 0], [4, 0], [4, 4], [0, 4]],
+        'floors': 2,
+        'simulate_all_floors': True,
+        'floor_to_floor_height': 3.0,
+        'sensor_grid': {'x_dim': 2.0, 'y_dim': 2.0, 'offset': 0.75},
+    })
+    model, grids = build_model(cfg)
+    sensor_count = grids.count
+    model_path = export_model(model, str(tmp_path))
+    monkeypatch.setenv('FOTON_BACKEND', 'reference')
+
+    runner.run_df(model_path, str(tmp_path), sensor_count, draft=False)
+
+    result = parse_df(str(tmp_path))
+    points = parse_sensor_points(str(tmp_path))
+    manifest = parse_sensor_grids(str(tmp_path))
+    assert len(result['values']) == len(points) == sensor_count
+    assert [grid['floor_number'] for grid in manifest] == [1, 2]
+    assert [grid['start_sensor_index'] for grid in manifest] == [0, grids[0].count]
+    assert sorted({point[2] for point in points}) == [0.75, 3.75]

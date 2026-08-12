@@ -13,7 +13,12 @@ from ladybug.wea import Wea
 
 from simulation.inputs import load_room_inputs, validate_room_inputs
 from simulation.model import build_model, export_model
-from simulation.results import parse_annual, parse_df, parse_sensor_points
+from simulation.results import (
+    parse_annual,
+    parse_df,
+    parse_sensor_grids,
+    parse_sensor_points,
+)
 from simulation.runner import run_annual, run_df
 from simulation.energy.epsm_client import fetch_constructions, submit_idf
 from simulation.energy.idf_builder import build_idf
@@ -26,6 +31,26 @@ from .store import store
 
 STUDIES_ROOT = os.path.abspath('./studies')
 WEATHER_DIR  = os.path.abspath('./weather')
+
+
+def _validate_daylight_result_alignment(
+    sensor_points: list[list[float]],
+    df_result: dict,
+    sda_result: dict | None,
+) -> None:
+    """Enforce the frontend's ordered-point-cloud result contract."""
+    lengths = {
+        'sensor_points': len(sensor_points),
+        'df.values': len(df_result['values']),
+    }
+    if sda_result is not None:
+        lengths.update({
+            'sda.values': len(sda_result['values']),
+            'sda.pass': len(sda_result['pass']),
+        })
+    if len(set(lengths.values())) != 1:
+        detail = ', '.join(f'{name}={length}' for name, length in lengths.items())
+        raise RuntimeError(f'Daylight result arrays are not index-aligned: {detail}.')
 
 
 def _epw_path(location: str, energy: bool = False) -> str:
@@ -104,6 +129,8 @@ def run_study(
             )
 
         # ── Store result ──────────────────────────────────────────────────────
+        sensor_points = parse_sensor_points(project_folder)
+        _validate_daylight_result_alignment(sensor_points, df_result, sda_result)
         store.update(
             study_id,
             status='complete',
@@ -111,7 +138,8 @@ def run_study(
             result={
                 'df': df_result,
                 'sda': sda_result,
-                'sensor_points': parse_sensor_points(project_folder),
+                'sensor_points': sensor_points,
+                'sensor_grids': parse_sensor_grids(project_folder),
             },
         )
 
