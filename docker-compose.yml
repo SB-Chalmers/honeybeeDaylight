@@ -21,6 +21,7 @@ services:
     environment:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
       - WORKERS=${WORKERS:-2}
+      - FOTON_BACKEND=${FOTON_BACKEND:-auto}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]

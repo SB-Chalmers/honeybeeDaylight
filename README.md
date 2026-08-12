@@ -2,12 +2,12 @@
 
 ![Python](https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?logo=fastapi&logoColor=white)
-![Radiance](https://img.shields.io/badge/Radiance-5.4-orange)
-![Honeybee](https://img.shields.io/badge/Honeybee-Radiance-yellow?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PC9zdmc+)
+![Foton](https://img.shields.io/badge/Foton-0.2.0-blueviolet)
+![Honeybee](https://img.shields.io/badge/Honeybee-models-yellow?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PC9zdmc+)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-51%20passing-brightgreen?logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen?logo=pytest&logoColor=white)
 
-A teaching tool that accepts a building description and returns daylight simulation results (Daylight Factor and spatial Daylight Autonomy) via a REST API. Built with [Honeybee](https://www.ladybug.tools/honeybee.html) + [Radiance](https://www.radiance-online.org/) + [FastAPI](https://fastapi.tiangolo.com/).
+A teaching tool that accepts a building description and returns daylight simulation results (Daylight Factor and spatial Daylight Autonomy) via a REST API. Built with [Honeybee](https://www.ladybug.tools/honeybee.html) + [Foton](https://github.com/snjsomnath/foton) + [FastAPI](https://fastapi.tiangolo.com/).
 
 ---
 
@@ -188,10 +188,38 @@ pip install pytest
 # Run tests
 pytest tests/ -v
 
-# Start dev server (auto-reload)
-uvicorn api.main:app --reload
+# Start dev server on localhost:8000 (auto-reload)
+uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-> Radiance binaries must be installed at `/usr/local/radiance` (or wherever
-> `honeybee_radiance.config.folders.radiance_path` points) for simulations to run.
-> The Docker image handles this automatically.
+Open the API at `http://127.0.0.1:8000` and interactive docs at
+`http://127.0.0.1:8000/docs`.
+
+### If a previous process did not close cleanly
+
+If you see `address already in use` for port `8000`, stop the old server and
+start again:
+
+```bash
+# 1) Try graceful stop first
+lsof -ti :8000 | xargs kill
+
+# 2) If still busy, force stop
+lsof -ti :8000 | xargs kill -9
+
+# 3) Start the API again
+source .venv/bin/activate
+uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Quick check that the API is up:
+
+```bash
+curl -I http://127.0.0.1:8000/docs
+```
+
+> Foton automatically selects Metal, Vulkan, or its deterministic reference CPU
+> backend. Set `FOTON_BACKEND=reference` to force CPU execution. Annual sDA still
+> needs Radiance `gendaymtx` for EPW/WEA sky-matrix preparation; daylight
+> transport and metric reduction are performed by Foton. The Docker image
+> provides `gendaymtx` automatically.

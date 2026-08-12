@@ -399,7 +399,9 @@ honeybee-energy>=1.100
 httpx>=0.27
 ```
 
-`honeybee-energy` is a separate package from `honeybee-radiance` (daylight). Both can coexist.
+`honeybee-energy` is separate from the Foton daylight engine. The Honeybee
+Radiance extension remains installed only for HBJSON sensor-grid and material
+compatibility; Foton performs daylight transport and metric reduction.
 
 ---
 

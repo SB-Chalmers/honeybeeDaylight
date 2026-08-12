@@ -88,7 +88,15 @@ def run_study(
             Wea.from_epw_file(epw).write(wea_path)
 
             store.update(study_id, stage='annual_daylight_ray_tracing')
-            run_annual(model_path, project_folder, grid.count, wea_path, draft=draft)
+            run_annual(
+                model_path,
+                project_folder,
+                grid.count,
+                wea_path,
+                draft=draft,
+                da_lux=da_lux,
+                sda_target_pct=sda_target_pct,
+            )
             sda_result = parse_annual(
                 project_folder,
                 da_lux=da_lux,
