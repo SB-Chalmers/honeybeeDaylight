@@ -165,3 +165,14 @@ class TestValidate:
         cfg['sensor_grid']['x_dim'] = 0
         with pytest.raises(ValueError, match='x_dim'):
             validate_room_inputs(cfg)
+
+    def test_shared_floors_by_edge_passes(self):
+        validate_room_inputs(self._valid(floors=3, shared_floors_by_edge=[[], [1, 2, 3], [], [1]]))
+
+    def test_shared_floors_by_edge_wrong_length_raises(self):
+        with pytest.raises(ValueError, match='exactly 4 entries'):
+            validate_room_inputs(self._valid(shared_floors_by_edge=[[], [1], []]))
+
+    def test_shared_floor_above_the_building_raises(self):
+        with pytest.raises(ValueError, match='floor 4'):
+            validate_room_inputs(self._valid(floors=3, shared_floors_by_edge=[[], [4], [], []]))

@@ -66,6 +66,11 @@ class RoomInput(BaseModel):
         None,
         description='Optional per-edge WWR list aligned to footprint edge order [p0->p1, p1->p2, ...].'
     )
+    shared_floors_by_edge: Optional[list[list[int]]] = Field(
+        None,
+        description='Optional per-edge list of floors (1-based), aligned to footprint edge order, whose wall '
+                    'is shared with a neighbouring building. Shared walls are adiabatic and get no windows.'
+    )
 
     wall_thickness: float = Field(0.3, ge=0)
     additional_horizontal_shading_depth: float = Field(0.0, ge=0)
@@ -92,12 +97,26 @@ class RoomInput(BaseModel):
                 raise ValueError('Each wwr_by_edge value must be in [0, 1].')
         return v
 
+    @field_validator('shared_floors_by_edge')
+    @classmethod
+    def validate_shared_floors_by_edge(cls, v):
+        if v is None:
+            return v
+        if len(v) < 3:
+            raise ValueError('shared_floors_by_edge must include at least 3 edges.')
+        for floors in v:
+            if any(floor < 1 for floor in floors):
+                raise ValueError('Floor numbers in shared_floors_by_edge must be >= 1.')
+        return v
+
     def to_simulation_dict(self) -> dict:
         """Convert to the flat dict expected by simulation.inputs.load_room_inputs."""
-        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge'})
+        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge', 'shared_floors_by_edge'})
         d['sensor_grid'] = self.sensor_grid.model_dump()
         if self.wwr_by_edge is not None:
             d['wwr_by_edge'] = self.wwr_by_edge
+        if self.shared_floors_by_edge is not None:
+            d['shared_floors_by_edge'] = self.shared_floors_by_edge
         if self.wwr_by_cardinal:
             d['wwr_by_cardinal'] = self.wwr_by_cardinal.model_dump()
         elif self.wwr is not None:

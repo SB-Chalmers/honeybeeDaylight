@@ -21,6 +21,7 @@ from ladybug_geometry.geometry3d.pointvector import Point3D
 from ladybug_geometry.geometry3d.polyface import Polyface3D
 
 from .inputs import GRID_DIM
+from .shared_walls import make_adiabatic, shared_edges_on_floor
 
 
 class SensorGridCollection(tuple):
@@ -57,7 +58,7 @@ def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
     return Room.from_polyface3d(identifier, polyface)
 
 
-def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
+def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
     wwr = cfg['wwr_by_cardinal']
     edge_wwr = cfg.get('wwr_by_edge')
     window_width = float(cfg.get('window_width', 1.2))
@@ -82,7 +83,11 @@ def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
     sill_height = max(0.0, (floor_height - window_height) / 2.0)
     centerline_separation = max(window_width + window_spacing, 0.01)
 
-    for face, ratio in zip(walls, ratios):
+    shared = shared_edges_on_floor(cfg, floor_number)
+    for index, (face, ratio) in enumerate(zip(walls, ratios)):
+        if index in shared:
+            make_adiabatic(face)
+            continue
         if ratio <= 0:
             continue
         face.apertures_by_ratio_rectangle(
@@ -166,7 +171,7 @@ def build_model(cfg: dict, context_buildings: list[dict] | None = None):
         )
         grid_identifier = f'floor_{suffix}_grid' if all_floors else 'floor_grid'
         room = _room_from_footprint(cfg, floor_number, room_identifier)
-        _apply_wwr_and_shading(room, cfg)
+        _apply_wwr_and_shading(room, cfg, floor_number)
         rooms.append(room)
         grids.append(_sensor_grid(room, cfg, grid_identifier))
 

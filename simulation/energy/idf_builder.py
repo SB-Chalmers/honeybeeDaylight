@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 
+from ..shared_walls import make_adiabatic, shared_edges_on_floor
 
 
 def footprint_area(points: list[list[float]]) -> float:
@@ -135,7 +136,11 @@ def build_idf(room: dict, constructions: dict, building_program: str,
         else:
             ratios = [float(wwr_map.get(_cardinal(f.normal), 0.0)) for f in walls]
 
-        for wall_face, ratio in zip(walls, ratios):
+        shared = shared_edges_on_floor(room, floor_idx + 1)
+        for edge_index, (wall_face, ratio) in enumerate(zip(walls, ratios)):
+            if edge_index in shared:
+                make_adiabatic(wall_face)
+                continue
             if ratio <= 0:
                 continue
             wall_face.apertures_by_ratio_rectangle(

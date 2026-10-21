@@ -160,6 +160,18 @@ def validate_room_inputs(cfg: dict) -> None:
             if not 0 <= ratio <= 1:
                 raise ValueError(f'wwr_by_edge[{i}] must be in [0, 1].')
 
+    shared_floors_by_edge = cfg.get('shared_floors_by_edge')
+    if shared_floors_by_edge is not None:
+        if len(shared_floors_by_edge) != expected_edges:
+            raise ValueError(
+                f'shared_floors_by_edge must contain exactly {expected_edges} entries to match footprint edges.'
+            )
+        floors = cfg.get('floors')
+        for i, edge_floors in enumerate(shared_floors_by_edge):
+            for floor in edge_floors:
+                if floor < 1 or (floors is not None and floor > floors):
+                    raise ValueError(f'shared_floors_by_edge[{i}] contains floor {floor}, which the building does not have.')
+
     wwr = cfg['wwr_by_cardinal']
     for direction in ('north', 'east', 'south', 'west'):
         if direction not in wwr:
