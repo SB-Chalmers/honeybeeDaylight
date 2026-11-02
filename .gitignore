@@ -28,3 +28,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Local study database and runtime data
+data/
