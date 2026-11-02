@@ -234,3 +234,11 @@ curl -I http://127.0.0.1:8000/docs
 > API daylight studies use Foton's final-quality solver settings with the
 > 146-patch Tregenza sky basis. The legacy `quality: "draft"` request value is
 > still accepted for client compatibility but no longer lowers solver quality.
+
+---
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+It depends on Ladybug Tools packages, including Honeybee, that are licensed under AGPL-3.0. Those packages keep their own terms, and section 13 of AGPL-3.0 applies when they're combined with this project.
