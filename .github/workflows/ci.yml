@@ -60,8 +60,11 @@ jobs:
           printf 'services:\n  daylight:\n    deploy: !reset {}\n' > ci.override.yml
           docker compose -f docker-compose.yml -f ci.override.yml up -d --wait
           docker compose ps
-          docker compose -f docker-compose.yml -f ci.override.yml run --rm -v "$PWD/scripts:/scripts" api \
-            python /scripts/client.py --url http://api:8000 --key ci-key --path /v1/daylight
+          # A tiny room at preview quality, so the CPU fallback answers in seconds.
+          echo '{"room": {"footprint_coordinates": [[0,0],[4,0],[4,3],[0,3]], "wwr": 0.4,
+                 "sensor_grid": {"x_dim": 1.0, "y_dim": 1.0}}, "daylight": {"quality": "preview"}}' > scripts/ci-room.json
+          timeout 300 docker compose -f docker-compose.yml -f ci.override.yml run --rm -v "$PWD/scripts:/scripts" api \
+            python /scripts/client.py --url http://api:8000 --key ci-key --path /v1/daylight --payload /scripts/ci-room.json
 
       - name: Logs if the stack failed
         if: failure()
