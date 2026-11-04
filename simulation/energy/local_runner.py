@@ -55,9 +55,16 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
         )
 
     result = _parse_htm(htm)
+    # The CSV needs ReadVarsESO, which some EnergyPlus builds (e.g. the one
+    # bundled with OpenStudio) lack; the ESO is always written.
     csv_path = sim_path / 'eplusout.csv'
-    result.update(parse_hourly_loads(csv_path) if csv_path.exists() else
-                  {'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
+    eso_path = sim_path / 'eplusout.eso'
+    if csv_path.exists():
+        result.update(parse_hourly_loads(csv_path))
+    elif eso_path.exists():
+        result.update(parse_hourly_loads_eso(eso_path))
+    else:
+        result.update({'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
     return result
 
 
@@ -93,6 +100,48 @@ def parse_hourly_loads(csv_path: Path) -> dict:
                 if not cells or any(cell == '' for cell in cells):
                     continue
                 series[key].append(sum(float(cell) for cell in cells) / 3_600_000)
+
+    return {key: (values or None) for key, values in series.items()}
+
+
+def parse_hourly_loads_eso(eso_path: Path) -> dict:
+    """Same as ``parse_hourly_loads`` but read straight from eplusout.eso.
+
+    ESO dictionary lines look like ``472,1,KEY,Variable [J] !Hourly``; data
+    lines are ``472,value`` after a ``2,...`` time stamp. Only the last
+    environment (the run period) is kept.
+    """
+    codes: dict[str, set[str]] = {key: set() for key in _HOURLY_COLUMNS}
+    with open(eso_path, encoding='utf-8', errors='replace') as stream:
+        for line in stream:
+            if line.startswith('End of Data Dictionary'):
+                break
+            parts = line.rstrip('\n').split(',', 3)
+            if len(parts) < 4 or '!' not in parts[3]:
+                continue
+            variable, _, frequency = parts[3].partition('!')
+            frequency = frequency.split('[')[0].strip()
+            name = f'{parts[2]}:{variable.strip()}({frequency})'.upper()
+            for key, suffix in _HOURLY_COLUMNS.items():
+                if name.endswith(suffix):
+                    codes[key].add(parts[0])
+
+        series: dict[str, list[float]] = {key: [] for key in codes}
+        new_stamp = False
+        for line in stream:
+            code, _, value = line.partition(',')
+            if code == '1':  # new environment
+                series = {key: [] for key in codes}
+            elif code == '2':
+                new_stamp = True
+            else:
+                for key, key_codes in codes.items():
+                    if code in key_codes:
+                        if new_stamp:
+                            for values in series.values():
+                                values.append(0.0)
+                            new_stamp = False
+                        series[key][-1] += float(value) / 3_600_000
 
     return {key: (values or None) for key, values in series.items()}
 

@@ -95,3 +95,36 @@ def test_hourly_loads_sum_zones_and_skip_monthly_rows(tmp_path):
     loads = local_runner.parse_hourly_loads(path)
     assert loads['heating_hourly_kwh'] == [3.0, 1.0]
     assert loads['cooling_hourly_kwh'] == [0.0, 0.5]
+
+
+def test_hourly_loads_from_eso_keep_last_environment(tmp_path):
+    lines = [
+        'Program Version,EnergyPlus, Version 24.2.0-94a887817b',
+        '1,5,Environment Title[],Latitude[deg],Longitude[deg],Time Zone[],Elevation[m]',
+        '2,8,Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],Hour[],StartMinute[],EndMinute[],DayType',
+        '471,9,ZONE_1 IDEAL LOADS AIR SYSTEM,Zone Ideal Loads Supply Air Sensible Heating Energy [J] !Monthly [Value,Min,Day,Hour,Minute,Max,Day,Hour,Minute]',
+        '472,1,ZONE_1 IDEAL LOADS AIR SYSTEM,Zone Ideal Loads Supply Air Sensible Heating Energy [J] !Hourly',
+        '523,1,ZONE_1 IDEAL LOADS AIR SYSTEM,Zone Ideal Loads Supply Air Sensible Cooling Energy [J] !Hourly',
+        '574,1,ZONE_2 IDEAL LOADS AIR SYSTEM,Zone Ideal Loads Supply Air Sensible Heating Energy [J] !Hourly',
+        'End of Data Dictionary',
+        '1,SIZING DAY,57.7,11.9,1.0,10.0',
+        '2,1,1,21, 0, 1, 0.00,60.00,SummerDesignDay',
+        '472,99',
+        '1,RUN PERIOD 1,57.7,11.9,1.0,10.0',
+        '2,1,1,1, 0, 1, 0.00,60.00,Monday',
+        '472,3600000',
+        '523,0',
+        '574,7200000',
+        '2,1,1,1, 0, 2, 0.00,60.00,Monday',
+        '472,0',
+        '523,1800000',
+        '574,3600000',
+        '4,31, 1',
+        '471,99,0,1,1,0,99,1,1,0',
+        'End of Data',
+    ]
+    path = tmp_path / 'eplusout.eso'
+    path.write_text('\n'.join(lines))
+    loads = local_runner.parse_hourly_loads_eso(path)
+    assert loads['heating_hourly_kwh'] == [3.0, 1.0]
+    assert loads['cooling_hourly_kwh'] == [0.0, 0.5]
