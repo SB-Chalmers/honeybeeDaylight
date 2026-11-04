@@ -1,8 +1,8 @@
-"""Local EnergyPlus runner using the same Docker image as EPSM.
+"""Run EnergyPlus locally and parse its results.
 
-Drop-in replacement for the EPSM HTTP submission path. Runs
-nrel/energyplus:23.2.0 directly via Docker and parses the HTML summary
-that EnergyPlus writes (eplustbl.htm → output.htm).
+Uses the ``energyplus`` binary on PATH (or ``EPLUS_BINARY``). The Docker image
+ships EnergyPlus 24.2. Each run gets its own folder, so runs are independent
+and can happen in parallel.
 """
 
 from __future__ import annotations
@@ -12,84 +12,30 @@ import shutil
 import subprocess
 from pathlib import Path
 
-EPLUS_IMAGE = os.environ.get('EPLUS_DOCKER_IMAGE', 'nrel/energyplus:24.2.0')
-EPLUS_PLATFORM = os.environ.get('EPLUS_DOCKER_PLATFORM', 'linux/amd64')
+EPLUS_BINARY = os.environ.get('EPLUS_BINARY', 'energyplus')
 EPLUS_TIMEOUT = int(os.environ.get('EPLUS_TIMEOUT_SECONDS', '600'))
-
-# Optional path to a native EnergyPlus binary.  When set (or auto-detected via
-# PATH), it is used instead of Docker — avoids QEMU emulation on Apple Silicon.
-EPLUS_BINARY = os.environ.get('EPLUS_BINARY', '')
-
-
-def _find_native_eplus() -> str | None:
-    """Return path to a native EnergyPlus binary, or None if not found."""
-    import shutil
-    if EPLUS_BINARY:
-        return EPLUS_BINARY if os.path.isfile(EPLUS_BINARY) else None
-    # Common install locations on macOS and Linux
-    for candidate in ('energyplus', 'EnergyPlus'):
-        path = shutil.which(candidate)
-        if path:
-            return path
-    for prefix in (
-        '/usr/local/EnergyPlus-23-2-0',
-        '/Applications/EnergyPlus-23-2-0',
-        '/usr/local/EnergyPlus-24-2-0',
-        '/Applications/EnergyPlus-24-2-0',
-        '/Applications/OpenStudio-3.9.0/EnergyPlus',  # OpenStudio-bundled ARM64 binary
-        '/Applications/OpenStudio-3.8.0/EnergyPlus',
-        '/Applications/OpenStudio-3.7.0/EnergyPlus',
-    ):
-        candidate = os.path.join(prefix, 'energyplus')
-        if os.path.isfile(candidate):
-            return candidate
-    return None
 
 
 def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
-    """Run EnergyPlus via Docker and return parsed energy totals.
+    """Run EnergyPlus and return annual totals, monthly balance and hourly loads.
 
-    Blocking call — safe to use from a background thread.
-
-    Returns
-    -------
-    dict with keys:
-        heating_energy_kwh, cooling_energy_kwh, total_energy_kwh, floor_area_m2
-
-    Raises
-    ------
-    RuntimeError if EnergyPlus does not produce HTML output.
+    Blocking. Raises RuntimeError if EnergyPlus produces no HTML summary.
     """
     sim_path = Path(sim_dir)
     sim_path.mkdir(parents=True, exist_ok=True)
-
     shutil.copy2(idf_path, sim_path / 'input.idf')
     shutil.copy2(epw_path, sim_path / 'weather.epw')
 
-    native = _find_native_eplus()
-    if native:
-        # Native binary — no Docker, no emulation. Works on macOS ARM64 and Linux.
-        cmd = [
-            native,
-            '--weather', str(sim_path / 'weather.epw'),
-            '--output-directory', str(sim_path),
-            '--expandobjects', '--readvars',
-            str(sim_path / 'input.idf'),
-        ]
-    else:
-        # Docker fallback — works natively on Linux x86_64 deployment.
-        # Will segfault on Apple Silicon due to QEMU emulation of amd64 image.
-        cmd = [
-            'docker', 'run', '--rm',
-            '-v', f'{sim_path}:/var/simdata/energyplus',
-            '--platform', EPLUS_PLATFORM,
-            EPLUS_IMAGE,
-            'energyplus',
-            '--weather', '/var/simdata/energyplus/weather.epw',
-            '--output-directory', '/var/simdata/energyplus',
-            '--expandobjects', '--readvars',
-            '/var/simdata/energyplus/input.idf',
-        ]
+    binary = shutil.which(EPLUS_BINARY)
+    if not binary:
+        raise RuntimeError(f'EnergyPlus binary not found ({EPLUS_BINARY!r}). Set EPLUS_BINARY.')
+    cmd = [
+        binary,
+        '--weather', str(sim_path / 'weather.epw'),
+        '--output-directory', str(sim_path),
+        '--expandobjects', '--readvars',
+        str(sim_path / 'input.idf'),
+    ]
 
     proc = subprocess.run(
         cmd,
@@ -99,39 +45,56 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
         cwd=str(sim_path),
     )
 
-    (sim_path / 'run_output.log').write_text(
-        f"COMMAND: {' '.join(cmd)}\n\n"
-        f"STDOUT:\n{proc.stdout}\n\nSTDERR:\n{proc.stderr}"
-    )
-
-    # Rename standard EnergyPlus output files to the names the rest of the
-    # backend expects (same mapping as EPSM's services.py).
-    for src, dst in {
-        'eplusout.err': 'output.err',
-        'eplustbl.htm': 'output.htm',
-        'eplusout.eso': 'output.eso',
-        'eplusout.csv': 'output.csv',
-        'eplusout.mtr': 'output.mtr',
-        'eplusout.sql': 'output.sql',
-        'eplusout.html': 'output.html',
-    }.items():
-        src_p = sim_path / src
-        if src_p.exists():
-            src_p.rename(sim_path / dst)
-
-    htm = sim_path / 'output.htm'
-    if not htm.exists() and (sim_path / 'output.html').exists():
-        htm = sim_path / 'output.html'
-
+    htm = sim_path / 'eplustbl.htm'
     if not htm.exists():
-        err_file = sim_path / 'output.err'
+        err_file = sim_path / 'eplusout.err'
         err_tail = err_file.read_text(errors='replace')[-3000:] if err_file.exists() else '(no error file)'
         raise RuntimeError(
             f'EnergyPlus produced no HTML results table (exit={proc.returncode}). '
             f'Last errors:\n{err_tail}'
         )
 
-    return _parse_htm(htm)
+    result = _parse_htm(htm)
+    csv_path = sim_path / 'eplusout.csv'
+    result.update(parse_hourly_loads(csv_path) if csv_path.exists() else
+                  {'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Hourly heating / cooling series (ReadVarsESO CSV)
+# ---------------------------------------------------------------------------
+
+_HOURLY_COLUMNS = {
+    'heating_hourly_kwh': 'ZONE IDEAL LOADS SUPPLY AIR SENSIBLE HEATING ENERGY [J](HOURLY)',
+    'cooling_hourly_kwh': 'ZONE IDEAL LOADS SUPPLY AIR SENSIBLE COOLING ENERGY [J](HOURLY)',
+}
+
+
+def parse_hourly_loads(csv_path: Path) -> dict:
+    """Sum hourly ideal-loads heating and cooling across zones, in kWh per hour.
+
+    The CSV mixes reporting frequencies, so only rows that carry hourly values
+    are kept (8760 for a full non-leap year).
+    """
+    import csv
+
+    with open(csv_path, newline='', encoding='utf-8', errors='replace') as stream:
+        reader = csv.reader(stream)
+        header = [cell.strip().upper() for cell in next(reader)]
+        columns = {
+            key: [i for i, name in enumerate(header) if name.endswith(suffix)]
+            for key, suffix in _HOURLY_COLUMNS.items()
+        }
+        series: dict[str, list[float]] = {key: [] for key in columns}
+        for row in reader:
+            for key, indices in columns.items():
+                cells = [row[i].strip() for i in indices if i < len(row)]
+                if not cells or any(cell == '' for cell in cells):
+                    continue
+                series[key].append(sum(float(cell) for cell in cells) / 3_600_000)
+
+    return {key: (values or None) for key, values in series.items()}
 
 
 # ---------------------------------------------------------------------------

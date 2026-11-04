@@ -31,3 +31,7 @@ Thumbs.db
 
 # Local study database and runtime data
 data/
+
+# Local secrets (APP_KEYS etc.)
+.env
+dump.rdb

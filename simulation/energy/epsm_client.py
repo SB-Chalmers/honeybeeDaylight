@@ -1,47 +1,55 @@
-"""Async client for the public EPSM construction and simulation API."""
+"""Look up construction and material records from the external EPSM service.
+
+EPSM is served separately (``EPSM_BASE_URL``); this backend only reads its
+catalogue. Each worker process caches the catalogue for ``EPSM_CACHE_SECONDS``
+so a burst of jobs does not refetch it every time.
+"""
 
 from __future__ import annotations
 
 import os
+import threading
+import time
+
+import httpx
 
 EPSM_BASE = os.environ.get('EPSM_BASE_URL', 'https://epsm.chalmers.se').rstrip('/')
+CACHE_SECONDS = float(os.environ.get('EPSM_CACHE_SECONDS', '600'))
+
+_cache: dict = {'at': 0.0, 'constructions': None, 'materials': None}
+_lock = threading.Lock()
 
 
-def _httpx():
-    try:
-        import httpx
-    except ImportError as exc:
-        raise RuntimeError('httpx is required for EPSM energy simulations. Install requirements.txt.') from exc
-    return httpx
-
-
-def _payload_record(payload):
+def _records(payload) -> list[dict]:
     if isinstance(payload, dict):
-        return payload
-    if isinstance(payload, list):
-        return next((item for item in payload if isinstance(item, dict)), {})
-    return {}
+        payload = payload.get('results', payload.get('data', []))
+    return [item for item in payload if isinstance(item, dict)]
 
 
-async def fetch_constructions(names: dict) -> dict:
-    httpx = _httpx()
-    async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.get(f'{EPSM_BASE}/api/constructions/')
-        response.raise_for_status()
-        records = response.json()
-        if isinstance(records, dict):
-            records = records.get('results', records.get('data', []))
-        materials_response = await client.get(f'{EPSM_BASE}/api/materials/')
-        materials_response.raise_for_status()
-        materials = materials_response.json()
-        if isinstance(materials, dict):
-            materials = materials.get('results', materials.get('data', []))
+def _catalogue() -> tuple[dict, dict]:
+    with _lock:
+        stale = time.monotonic() - _cache['at'] > CACHE_SECONDS
+        if _cache['constructions'] is None or stale:
+            with httpx.Client(timeout=60) as client:
+                constructions = client.get(f'{EPSM_BASE}/api/constructions/')
+                materials = client.get(f'{EPSM_BASE}/api/materials/')
+            constructions.raise_for_status()
+            materials.raise_for_status()
+            _cache['constructions'] = {r['name']: r for r in _records(constructions.json())}
+            _cache['materials'] = {r['name']: r for r in _records(materials.json())}
+            _cache['at'] = time.monotonic()
+        return _cache['constructions'], _cache['materials']
 
-    material_by_name = {item['name']: item for item in materials}
-    by_name = {item['name']: item for item in records}
-    missing = [name for name in names.values() if name not in by_name]
+
+def fetch_constructions(names: dict) -> dict:
+    """Return {element_type: construction record with material data merged into layers}.
+
+    Raises ``LookupError`` when a requested construction name is not in EPSM.
+    """
+    by_name, material_by_name = _catalogue()
+    missing = sorted({name for name in names.values() if name not in by_name})
     if missing:
-        raise ValueError(f'EPSM constructions not found: {missing}')
+        raise LookupError(f'EPSM constructions not found: {missing}')
     selected = {}
     for element_type, name in names.items():
         construction = dict(by_name[name])
@@ -51,38 +59,3 @@ async def fetch_constructions(names: dict) -> dict:
         ]
         selected[element_type] = construction
     return selected
-
-
-async def submit_idf(idf_path: str, epw_path: str) -> str:
-    httpx = _httpx()
-    async with httpx.AsyncClient(timeout=120) as client:
-        with open(idf_path, 'rb') as idf, open(epw_path, 'rb') as epw:
-            response = await client.post(
-                f'{EPSM_BASE}/api/simulation/run/',
-                files={
-                    'idf_files': (os.path.basename(idf_path), idf),
-                    'weather_file': (os.path.basename(epw_path), epw),
-                },
-            )
-        response.raise_for_status()
-        payload = _payload_record(response.json())
-    simulation_id = payload.get('simulation_id') or payload.get('simulationId')
-    if not simulation_id:
-        raise ValueError('EPSM did not return a simulation_id.')
-    return simulation_id
-
-
-async def simulation_status(simulation_id: str) -> dict:
-    httpx = _httpx()
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.get(f'{EPSM_BASE}/api/simulation/{simulation_id}/status/')
-        response.raise_for_status()
-        return _payload_record(response.json())
-
-
-async def simulation_results(simulation_id: str) -> dict:
-    httpx = _httpx()
-    async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.get(f'{EPSM_BASE}/api/simulation/{simulation_id}/results/')
-        response.raise_for_status()
-        return _payload_record(response.json())

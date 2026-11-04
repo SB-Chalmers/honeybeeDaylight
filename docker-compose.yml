@@ -1,31 +1,51 @@
-# Daylight Simulation API — production compose file
+# Simulation service: API + Redis + two Celery workers.
 #
-# First-time setup on the university VM:
-#   1. git clone <repo> && cd honeybeeDaylight
-#   2. Copy EPW files into ./weather/  (e.g. gothenburg.epw)
-#   3. cp .env.example .env  and set ALLOWED_ORIGINS
-#   4. docker compose up -d
+#   cp .env.example .env    # set APP_KEYS
+#   docker compose up -d --build
 #
-# Update to latest code:
-#   git pull && docker compose up -d --build
+# Daylight runs on the GPU queue (one job at a time per GPU).
+# Energy runs on the CPU queue (ENERGY_CONCURRENCY EnergyPlus runs at once).
+
+x-app: &app
+  build: .
+  image: simulation-service
+  env_file: .env
+  restart: unless-stopped
+  depends_on: [redis]
 
 services:
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./weather:/app/weather   # EPW files — add new cities here
-      - ./studies:/app/studies   # per-study simulation outputs
-      - ./data:/app/data         # SQLite database (survives restarts)
-    environment:
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
-      - WORKERS=${WORKERS:-2}
-      - FOTON_BACKEND=${FOTON_BACKEND:-auto}
+  redis:
+    image: redis:7-alpine
+    # Queue + short-lived results only: no persistence. When memory is full,
+    # expire results first and never drop queued jobs.
+    command: redis-server --save "" --appendonly no --maxmemory 512mb --maxmemory-policy volatile-ttl
     restart: unless-stopped
+
+  api:
+    <<: *app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers ${API_WORKERS:-2}
+    ports: ["8000:8000"]
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 15s
+
+  daylight:
+    <<: *app
+    command: celery -A worker.celery_app worker -Q daylight --concurrency 1 --loglevel INFO
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: all   # 'graphics' is needed for Vulkan
+    # Needs the NVIDIA Container Toolkit on the host. Remove this block on a
+    # machine without a GPU and Foton falls back to the CPU.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  energy:
+    <<: *app
+    command: sh -c 'exec celery -A worker.celery_app worker -Q energy --concurrency "$${ENERGY_CONCURRENCY:-$$(nproc)}" --loglevel INFO'

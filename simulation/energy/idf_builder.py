@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-from .mappers import hvac_identifier, program_identifier
 
 
 def footprint_area(points: list[list[float]]) -> float:
@@ -65,19 +64,20 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
     return cs
 
 
-# Map of frontend building_program strings to honeybee-energy program type identifiers
-_PROGRAM_MAP = {
+# Frontend building_program names -> honeybee-energy program type identifiers.
+# All of these exist in honeybee-energy-standards 2.3.x.
+PROGRAMS = {
     'Office': 'Generic Office Program',
-    'Residential': '2013::MidRiseApartment::Apartment',
-    'Retail': '2013::StripMall::WholeBuilding',
-    'School': '2013::SecondarySchool::Classroom',
-    'Hospital': '2013::Hospital::Office',
-    'Industrial': '2013::Warehouse::Office',
+    'Residential': '2019::MidriseApartment::Apartment',
+    'Retail': '2019::Retail::Retail',
+    'School': '2019::SecondarySchool::Classroom',
+    'Hospital': '2019::Hospital::Office',
+    'Industrial': '2019::Warehouse::Office',
 }
 
 
 def build_idf(room: dict, constructions: dict, building_program: str,
-              hvac_system: str, natural_ventilation: bool,
+              natural_ventilation: bool,
               context_buildings: list[dict] | None = None) -> tuple[str, float]:
     """Generate a complete EnergyPlus IDF using honeybee-energy.
 
@@ -152,7 +152,7 @@ def build_idf(room: dict, constructions: dict, building_program: str,
             # window SHGC, so omitting them has negligible effect on annual totals.
 
         # Assign energy properties
-        prog_id = _PROGRAM_MAP.get(building_program, 'Generic Office Program')
+        prog_id = PROGRAMS[building_program]
         prog = program_type_by_identifier(prog_id).duplicate()
 
         # When natural ventilation is enabled, raise the cooling setpoint to 50 °C
@@ -231,6 +231,9 @@ def build_idf(room: dict, constructions: dict, building_program: str,
         # because the district meters need explicit monthly tracking.
         '\nOutput:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Monthly;\n'
         'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Monthly;\n'
+        # Hourly heating/cooling for the annual time series (read from eplusout.csv).
+        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly;\n'
+        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Hourly;\n'
         'Output:Variable,*,Zone People Sensible Heating Energy,Monthly;\n'
         'Output:Variable,*,Zone Lights Electricity Energy,Monthly;\n'
         'Output:Variable,*,Zone Electric Equipment Electricity Energy,Monthly;\n'
