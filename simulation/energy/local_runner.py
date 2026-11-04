@@ -38,7 +38,7 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dic
         binary,
         '--weather', str(sim_path / 'weather.epw'),
         '--output-directory', str(sim_path),
-        '--expandobjects', '--readvars',
+        '--expandobjects',
         str(sim_path / 'input.idf'),
     ]
 
@@ -60,21 +60,17 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dic
         )
 
     result = _parse_htm(htm, multipliers)
-    # The CSV needs ReadVarsESO, which some EnergyPlus builds (e.g. the one
-    # bundled with OpenStudio) lack; the ESO is always written.
-    csv_path = sim_path / 'eplusout.csv'
+    # Hourly loads come straight from eplusout.eso (no ReadVarsESO/CSV step).
     eso_path = sim_path / 'eplusout.eso'
-    if csv_path.exists():
-        result.update(parse_hourly_loads(csv_path))
-    elif eso_path.exists():
-        result.update(parse_hourly_loads_eso(eso_path))
+    if eso_path.exists():
+        result.update(parse_hourly_loads(eso_path))
     else:
         result.update({'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
     return result
 
 
 # ---------------------------------------------------------------------------
-# Hourly heating / cooling series (ReadVarsESO CSV)
+# Hourly heating / cooling series (eplusout.eso)
 # ---------------------------------------------------------------------------
 
 _HOURLY_COLUMNS = {
@@ -83,34 +79,8 @@ _HOURLY_COLUMNS = {
 }
 
 
-def parse_hourly_loads(csv_path: Path) -> dict:
+def parse_hourly_loads(eso_path: Path) -> dict:
     """Sum hourly ideal-loads heating and cooling across zones, in kWh per hour.
-
-    The CSV mixes reporting frequencies, so only rows that carry hourly values
-    are kept (8760 for a full non-leap year).
-    """
-    import csv
-
-    with open(csv_path, newline='', encoding='utf-8', errors='replace') as stream:
-        reader = csv.reader(stream)
-        header = [cell.strip().upper() for cell in next(reader)]
-        columns = {
-            key: [i for i, name in enumerate(header) if name.endswith(suffix)]
-            for key, suffix in _HOURLY_COLUMNS.items()
-        }
-        series: dict[str, list[float]] = {key: [] for key in columns}
-        for row in reader:
-            for key, indices in columns.items():
-                cells = [row[i].strip() for i in indices if i < len(row)]
-                if not cells or any(cell == '' for cell in cells):
-                    continue
-                series[key].append(sum(float(cell) for cell in cells) / 3_600_000)
-
-    return {key: (values or None) for key, values in series.items()}
-
-
-def parse_hourly_loads_eso(eso_path: Path) -> dict:
-    """Same as ``parse_hourly_loads`` but read straight from eplusout.eso.
 
     ESO dictionary lines look like ``472,1,KEY,Variable [J] !Hourly``; data
     lines are ``472,value`` after a ``2,...`` time stamp. Only the last

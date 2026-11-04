@@ -80,23 +80,6 @@ def test_unknown_construction_is_client_error(monkeypatch):
         jobs.energy_job({'room': ROOM, 'energy': {'constructions': {'wall': 'x'}}})
 
 
-def test_hourly_loads_sum_zones_and_skip_monthly_rows(tmp_path):
-    heat = 'ZONE_{}_IDEALAIR IDEAL LOADS AIR SYSTEM:Zone Ideal Loads Supply Air Sensible Heating Energy [J](Hourly)'
-    cool = 'ZONE_1_IDEALAIR IDEAL LOADS AIR SYSTEM:Zone Ideal Loads Supply Air Sensible Cooling Energy [J](Hourly)'
-    monthly = 'ZONE_1_IDEALAIR IDEAL LOADS AIR SYSTEM:Zone Ideal Loads Supply Air Sensible Heating Energy [J](Monthly)'
-    rows = [
-        ['Date/Time', heat.format(1), heat.format(2), cool, monthly],
-        [' 01/01  01:00:00', '3600000', '7200000', '0', ''],
-        [' 01/01  02:00:00', '0', '3600000', '1800000', ''],
-        [' January', '', '', '', '99'],
-    ]
-    path = tmp_path / 'output.csv'
-    path.write_text('\n'.join(','.join(row) for row in rows))
-    loads = local_runner.parse_hourly_loads(path)
-    assert loads['heating_hourly_kwh'] == [3.0, 1.0]
-    assert loads['cooling_hourly_kwh'] == [0.0, 0.5]
-
-
 def test_hourly_loads_from_eso_keep_last_environment(tmp_path):
     lines = [
         'Program Version,EnergyPlus, Version 24.2.0-94a887817b',
@@ -125,6 +108,6 @@ def test_hourly_loads_from_eso_keep_last_environment(tmp_path):
     ]
     path = tmp_path / 'eplusout.eso'
     path.write_text('\n'.join(lines))
-    loads = local_runner.parse_hourly_loads_eso(path)
+    loads = local_runner.parse_hourly_loads(path)
     assert loads['heating_hourly_kwh'] == [3.0, 1.0]
     assert loads['cooling_hourly_kwh'] == [0.0, 0.5]

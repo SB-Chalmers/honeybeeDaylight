@@ -244,7 +244,7 @@ def build_idf(room: dict, constructions: dict, building_program: str,
         # because the district meters need explicit monthly tracking.
         '\nOutput:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Monthly;\n'
         'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Monthly;\n'
-        # Hourly heating/cooling for the annual time series (read from eplusout.csv).
+        # Hourly heating/cooling for the annual time series (read from eplusout.eso).
         'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly;\n'
         'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Hourly;\n'
         'Output:Variable,*,Zone People Sensible Heating Energy,Monthly;\n'
