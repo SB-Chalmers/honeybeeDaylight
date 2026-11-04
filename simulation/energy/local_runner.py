@@ -19,8 +19,10 @@ EPLUS_TIMEOUT = int(os.environ.get('EPLUS_TIMEOUT_SECONDS', '600'))
 def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dict | None = None) -> dict:
     """Run EnergyPlus and return annual totals, monthly balance and hourly loads.
 
-    ``multipliers`` maps upper-case zone names to zone multipliers; zone-level
-    outputs are reported for one zone, so they are scaled by it.
+    ``multipliers`` maps upper-case zone names to zone multipliers. EnergyPlus
+    reports zone variables (people, lights, windows...) for one copy of the
+    zone, so the monthly balance scales them. Ideal-loads variables already
+    include the multiplier and are left as they are.
 
     Blocking. Raises RuntimeError if EnergyPlus produces no HTML summary.
     """
@@ -57,15 +59,15 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dic
             f'Last errors:\n{err_tail}\nstderr:\n{proc.stderr[-2000:]}'
         )
 
-    result = _parse_htm(htm, multipliers or {})
+    result = _parse_htm(htm, multipliers)
     # The CSV needs ReadVarsESO, which some EnergyPlus builds (e.g. the one
     # bundled with OpenStudio) lack; the ESO is always written.
     csv_path = sim_path / 'eplusout.csv'
     eso_path = sim_path / 'eplusout.eso'
     if csv_path.exists():
-        result.update(parse_hourly_loads(csv_path, multipliers))
+        result.update(parse_hourly_loads(csv_path))
     elif eso_path.exists():
-        result.update(parse_hourly_loads_eso(eso_path, multipliers))
+        result.update(parse_hourly_loads_eso(eso_path))
     else:
         result.update({'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
     return result
@@ -81,13 +83,7 @@ _HOURLY_COLUMNS = {
 }
 
 
-def _zone_multiplier(key: str, multipliers: dict | None) -> int:
-    """Multiplier for an output key such as 'FLOORS_2_4 IDEAL LOADS AIR SYSTEM'."""
-    zone = key.strip().split(':')[0].split(' ')[0].upper()
-    return (multipliers or {}).get(zone, 1)
-
-
-def parse_hourly_loads(csv_path: Path, multipliers: dict | None = None) -> dict:
+def parse_hourly_loads(csv_path: Path) -> dict:
     """Sum hourly ideal-loads heating and cooling across zones, in kWh per hour.
 
     The CSV mixes reporting frequencies, so only rows that carry hourly values
@@ -102,28 +98,25 @@ def parse_hourly_loads(csv_path: Path, multipliers: dict | None = None) -> dict:
             key: [i for i, name in enumerate(header) if name.endswith(suffix)]
             for key, suffix in _HOURLY_COLUMNS.items()
         }
-        scale = [_zone_multiplier(name, multipliers) for name in header]
         series: dict[str, list[float]] = {key: [] for key in columns}
         for row in reader:
             for key, indices in columns.items():
                 cells = [row[i].strip() for i in indices if i < len(row)]
                 if not cells or any(cell == '' for cell in cells):
                     continue
-                series[key].append(
-                    sum(float(row[i]) * scale[i] for i in indices) / 3_600_000
-                )
+                series[key].append(sum(float(cell) for cell in cells) / 3_600_000)
 
     return {key: (values or None) for key, values in series.items()}
 
 
-def parse_hourly_loads_eso(eso_path: Path, multipliers: dict | None = None) -> dict:
+def parse_hourly_loads_eso(eso_path: Path) -> dict:
     """Same as ``parse_hourly_loads`` but read straight from eplusout.eso.
 
     ESO dictionary lines look like ``472,1,KEY,Variable [J] !Hourly``; data
     lines are ``472,value`` after a ``2,...`` time stamp. Only the last
     environment (the run period) is kept.
     """
-    codes: dict[str, dict[str, int]] = {key: {} for key in _HOURLY_COLUMNS}
+    codes: dict[str, set[str]] = {key: set() for key in _HOURLY_COLUMNS}
     with open(eso_path, encoding='utf-8', errors='replace') as stream:
         for line in stream:
             if line.startswith('End of Data Dictionary'):
@@ -136,7 +129,7 @@ def parse_hourly_loads_eso(eso_path: Path, multipliers: dict | None = None) -> d
             name = f'{parts[2]}:{variable.strip()}({frequency})'.upper()
             for key, suffix in _HOURLY_COLUMNS.items():
                 if name.endswith(suffix):
-                    codes[key][parts[0]] = _zone_multiplier(parts[2], multipliers)
+                    codes[key].add(parts[0])
 
         series: dict[str, list[float]] = {key: [] for key in codes}
         new_stamp = False
@@ -153,7 +146,7 @@ def parse_hourly_loads_eso(eso_path: Path, multipliers: dict | None = None) -> d
                             for values in series.values():
                                 values.append(0.0)
                             new_stamp = False
-                        series[key][-1] += float(value) * key_codes[code] / 3_600_000
+                        series[key][-1] += float(value) / 3_600_000
 
     return {key: (values or None) for key, values in series.items()}
 
@@ -265,10 +258,11 @@ def _parse_monthly_balance(soup, floor_area_m2: float, multipliers: dict | None 
         rows = tbl.find_all('tr')
         if len(rows) < 2:
             continue
-        # Each zone's table is preceded by "For: <b>ZONE NAME</b>".
+        # Each table is preceded by "For: <b>KEY</b>"; zone tables need scaling.
         for_label = b_tag.find_previous(string=lambda text: text and text.strip().startswith('For:'))
         zone_tag = for_label.find_next('b') if for_label else None
-        multiplier = _zone_multiplier(zone_tag.get_text() if zone_tag else '', multipliers)
+        zone = zone_tag.get_text(strip=True).upper() if zone_tag else ''
+        multiplier = (multipliers or {}).get(zone, 1)
 
         # --- Header: map column index → (component_key, J→kWh factor) ---
         hdr_cells = rows[0].find_all(['td', 'th'])
@@ -318,7 +312,8 @@ def _parse_monthly_balance(soup, floor_area_m2: float, multipliers: dict | None 
 
                 # Heating and cooling from IdealLoads appear once per zone;
                 # sum across zones to get building total.
-                aggregated[key][month_idx] += val_kwh * multiplier
+                scale = 1 if key in ('heating', 'cooling') else multiplier
+                aggregated[key][month_idx] += val_kwh * scale
 
     if not aggregated:
         return None

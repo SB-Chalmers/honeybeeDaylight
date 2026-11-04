@@ -95,9 +95,6 @@ def test_hourly_loads_sum_zones_and_skip_monthly_rows(tmp_path):
     loads = local_runner.parse_hourly_loads(path)
     assert loads['heating_hourly_kwh'] == [3.0, 1.0]
     assert loads['cooling_hourly_kwh'] == [0.0, 0.5]
-    # Zone outputs are per single zone: scale by the zone multiplier.
-    scaled = local_runner.parse_hourly_loads(path, {'ZONE_2_IDEALAIR': 3})
-    assert scaled['heating_hourly_kwh'] == [7.0, 3.0]
 
 
 def test_hourly_loads_from_eso_keep_last_environment(tmp_path):
