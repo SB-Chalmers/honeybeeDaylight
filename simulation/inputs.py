@@ -1,18 +1,16 @@
 """
 simulation.inputs
 ─────────────────
-Load, merge, and validate room inputs from a dict or JSON file.
+Fill in defaults for and validate the room inputs sent by the API.
 
 Public API
 ----------
-load_room_inputs(source, key='room_inputs') -> dict
+load_room_inputs(source) -> dict
 validate_room_inputs(cfg) -> None  (raises ValueError on bad input)
 DEFAULT_ROOM_INPUTS                -> reference defaults dict
 """
 
 import copy
-import json
-import os
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +59,7 @@ DEFAULT_ROOM_INPUTS = {
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _deep_merge(base: dict, updates: dict) -> dict:
+    """Copy of base with updates applied; nested dicts are merged, not replaced."""
     merged = copy.deepcopy(base)
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -83,48 +82,9 @@ def _fanout_wwr(cfg: dict) -> dict:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def load_room_inputs(source, key: str = 'room_inputs') -> dict:
-    """
-    Load room inputs from a dict, a JSON file path, or a raw JSON string.
-    Missing fields are filled from DEFAULT_ROOM_INPUTS.
-
-    Parameters
-    ----------
-    source : dict | str
-        A dict of room params, a path to a JSON file, or a raw JSON string.
-    key : str
-        Top-level key to read from when source is a file/string. Falls back
-        to the root object if the key is absent but the root looks like a
-        room input schema.
-    """
-    if isinstance(source, dict):
-        incoming = copy.deepcopy(source)
-    else:
-        # Treat as file path first, then raw JSON string.
-        if os.path.isabs(source) or os.path.exists(source):
-            if not os.path.exists(source):
-                print(f'Input JSON not found at {source}. Using defaults.')
-                return copy.deepcopy(DEFAULT_ROOM_INPUTS)
-            with open(source, 'r') as f:
-                payload = json.load(f)
-        else:
-            payload = json.loads(source)
-
-        if not isinstance(payload, dict):
-            raise ValueError('Input JSON must be an object at the root level.')
-
-        required = {'footprint_coordinates', 'orientation_offset',
-                    'floor_to_floor_height', 'selected_floor_number', 'wwr_by_cardinal'}
-        if key and key in payload:
-            incoming = payload[key]
-        elif required.issubset(payload.keys()):
-            incoming = payload
-        else:
-            print(f'Key "{key}" not found. Using defaults.')
-            return copy.deepcopy(DEFAULT_ROOM_INPUTS)
-
-    incoming = _fanout_wwr(incoming)
-    return _deep_merge(DEFAULT_ROOM_INPUTS, incoming)
+def load_room_inputs(source: dict) -> dict:
+    """Return the room inputs with missing fields filled from DEFAULT_ROOM_INPUTS."""
+    return _deep_merge(DEFAULT_ROOM_INPUTS, _fanout_wwr(copy.deepcopy(source)))
 
 
 def validate_room_inputs(cfg: dict) -> None:
@@ -159,6 +119,18 @@ def validate_room_inputs(cfg: dict) -> None:
         for i, ratio in enumerate(edge_wwr):
             if not 0 <= ratio <= 1:
                 raise ValueError(f'wwr_by_edge[{i}] must be in [0, 1].')
+
+    shared_floors_by_edge = cfg.get('shared_floors_by_edge')
+    if shared_floors_by_edge is not None:
+        if len(shared_floors_by_edge) != expected_edges:
+            raise ValueError(
+                f'shared_floors_by_edge must contain exactly {expected_edges} entries to match footprint edges.'
+            )
+        floors = cfg.get('floors')
+        for i, edge_floors in enumerate(shared_floors_by_edge):
+            for floor in edge_floors:
+                if floor < 1 or (floors is not None and floor > floors):
+                    raise ValueError(f'shared_floors_by_edge[{i}] contains floor {floor}, which the building does not have.')
 
     wwr = cfg['wwr_by_cardinal']
     for direction in ('north', 'east', 'south', 'west'):

@@ -1,13 +1,10 @@
 """
 Tests for simulation.inputs
 ────────────────────────────
-Covers: load_room_inputs (dict, JSON string, file), wwr fan-out,
+Covers: load_room_inputs (defaults), wwr fan-out,
         deep merge, validate_room_inputs error cases.
 """
 
-import json
-import os
-import tempfile
 
 import pytest
 
@@ -56,36 +53,6 @@ class TestLoadFromDict:
         inp = {'floor_to_floor_height': 5.0}
         load_room_inputs(inp)
         assert inp == {'floor_to_floor_height': 5.0}
-
-
-class TestLoadFromJsonString:
-    def test_reads_room_inputs_key(self):
-        payload = json.dumps({'room_inputs': MINIMAL})
-        cfg = load_room_inputs(payload)
-        assert cfg['floor_to_floor_height'] == MINIMAL['floor_to_floor_height']
-
-    def test_falls_back_to_root_when_no_key(self):
-        cfg = load_room_inputs(json.dumps(MINIMAL))
-        assert cfg['selected_floor_number'] == 1
-
-    def test_uses_defaults_when_key_missing(self, capsys):
-        payload = json.dumps({'some_other_key': 1})
-        cfg = load_room_inputs(payload)
-        captured = capsys.readouterr()
-        assert 'defaults' in captured.out.lower()
-        assert cfg['floor_to_floor_height'] == DEFAULT_ROOM_INPUTS['floor_to_floor_height']
-
-
-class TestLoadFromFile:
-    def test_reads_room_inputs_key_from_file(self, tmp_path):
-        p = tmp_path / 'study_info.json'
-        p.write_text(json.dumps({'room_inputs': MINIMAL}))
-        cfg = load_room_inputs(str(p))
-        assert cfg['wall_thickness'] == MINIMAL['wall_thickness']
-
-    def test_missing_file_returns_defaults(self, capsys):
-        cfg = load_room_inputs('/nonexistent/path/study_info.json')
-        assert cfg == DEFAULT_ROOM_INPUTS
 
 
 class TestWwrFanout:
@@ -165,3 +132,14 @@ class TestValidate:
         cfg['sensor_grid']['x_dim'] = 0
         with pytest.raises(ValueError, match='x_dim'):
             validate_room_inputs(cfg)
+
+    def test_shared_floors_by_edge_passes(self):
+        validate_room_inputs(self._valid(floors=3, shared_floors_by_edge=[[], [1, 2, 3], [], [1]]))
+
+    def test_shared_floors_by_edge_wrong_length_raises(self):
+        with pytest.raises(ValueError, match='exactly 4 entries'):
+            validate_room_inputs(self._valid(shared_floors_by_edge=[[], [1], []]))
+
+    def test_shared_floor_above_the_building_raises(self):
+        with pytest.raises(ValueError, match='floor 4'):
+            validate_room_inputs(self._valid(floors=3, shared_floors_by_edge=[[], [4], [], []]))

@@ -28,3 +28,4 @@ scripts/
 .DS_Store
 *.png
 *.jpg
+.env

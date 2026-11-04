@@ -1,24 +1,41 @@
 """
 api.schemas
 ───────────
-Pydantic request and response models for all endpoints.
+Request and response models for /v1/daylight, /v1/energy and /v1/simulate.
+
+The request is a compact building description; the server rebuilds the
+Honeybee model from it. Large result arrays are returned packed (base64
+typed arrays, see ``api.packing``) unless the client asks for plain JSON.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional, Union
+
 from pydantic import BaseModel, Field, field_validator
 
 
-# ── Room input ────────────────────────────────────────────────────────────────
+# ── Building description ─────────────────────────────────────────────────────
+
+def _check_footprint(v: list[list[float]]) -> list[list[float]]:
+    """A footprint needs at least 3 [x, y] points."""
+    if len(v) < 3:
+        raise ValueError('footprint_coordinates must have at least 3 points.')
+    for point in v:
+        if len(point) != 2:
+            raise ValueError('Each footprint coordinate must be a 2-D pair: [x, y].')
+    return v
+
 
 class SensorGridConfig(BaseModel):
+    """Sensor spacing (m) and height above the floor (m)."""
     x_dim: float = 0.3
     y_dim: float = 0.3
     offset: float = 0.75
 
 
 class WwrByCardinal(BaseModel):
+    """Window-to-wall ratio for walls facing each direction."""
     north: float = Field(0.4, ge=0, le=1)
     east:  float = Field(0.3, ge=0, le=1)
     south: float = Field(0.25, ge=0, le=1)
@@ -26,6 +43,7 @@ class WwrByCardinal(BaseModel):
 
 
 class RoomInput(BaseModel):
+    """The building being studied, as the editor describes it."""
     footprint_coordinates: list[list[float]] = Field(
         ..., min_length=3,
         description='2-D polygon [[x,y], ...] in metres; auto-closed.'
@@ -52,6 +70,11 @@ class RoomInput(BaseModel):
         None,
         description='Optional per-edge WWR list aligned to footprint edge order [p0->p1, p1->p2, ...].'
     )
+    shared_floors_by_edge: Optional[list[list[int]]] = Field(
+        None,
+        description='Optional per-edge list of floors (1-based), aligned to footprint edge order, whose wall '
+                    'is shared with a neighbouring building. Shared walls are adiabatic and get no windows.'
+    )
 
     wall_thickness: float = Field(0.3, ge=0)
     additional_horizontal_shading_depth: float = Field(0.0, ge=0)
@@ -63,13 +86,8 @@ class RoomInput(BaseModel):
 
     @field_validator('footprint_coordinates')
     @classmethod
-    def at_least_three_points(cls, v):
-        if len(v) < 3:
-            raise ValueError('footprint_coordinates must have at least 3 points.')
-        for point in v:
-            if len(point) != 2:
-                raise ValueError('Each footprint coordinate must be a 2-D pair: [x, y].')
-        return v
+    def _footprint(cls, v):
+        return _check_footprint(v)
 
     @field_validator('wwr_by_edge')
     @classmethod
@@ -83,12 +101,26 @@ class RoomInput(BaseModel):
                 raise ValueError('Each wwr_by_edge value must be in [0, 1].')
         return v
 
+    @field_validator('shared_floors_by_edge')
+    @classmethod
+    def validate_shared_floors_by_edge(cls, v):
+        if v is None:
+            return v
+        if len(v) < 3:
+            raise ValueError('shared_floors_by_edge must include at least 3 edges.')
+        for floors in v:
+            if any(floor < 1 for floor in floors):
+                raise ValueError('Floor numbers in shared_floors_by_edge must be >= 1.')
+        return v
+
     def to_simulation_dict(self) -> dict:
         """Convert to the flat dict expected by simulation.inputs.load_room_inputs."""
-        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge'})
+        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge', 'shared_floors_by_edge'})
         d['sensor_grid'] = self.sensor_grid.model_dump()
         if self.wwr_by_edge is not None:
             d['wwr_by_edge'] = self.wwr_by_edge
+        if self.shared_floors_by_edge is not None:
+            d['shared_floors_by_edge'] = self.shared_floors_by_edge
         if self.wwr_by_cardinal:
             d['wwr_by_cardinal'] = self.wwr_by_cardinal.model_dump()
         elif self.wwr is not None:
@@ -99,6 +131,7 @@ class RoomInput(BaseModel):
 
 
 class ContextBuildingInput(BaseModel):
+    """A neighbouring building; only casts shadows."""
     footprint_coordinates: list[list[float]] = Field(
         ..., min_length=3,
         description='2-D polygon [[x,y], ...] in metres; auto-closed.'
@@ -108,102 +141,84 @@ class ContextBuildingInput(BaseModel):
 
     @field_validator('footprint_coordinates')
     @classmethod
-    def at_least_three_points(cls, v):
-        if len(v) < 3:
-            raise ValueError('footprint_coordinates must have at least 3 points.')
-        for point in v:
-            if len(point) != 2:
-                raise ValueError('Each footprint coordinate must be a 2-D pair: [x, y].')
-        return v
+    def _footprint(cls, v):
+        return _check_footprint(v)
 
 
-# ── Study request ─────────────────────────────────────────────────────────────
+# ── Requests ─────────────────────────────────────────────────────────────────
 
-class Thresholds(BaseModel):
-    da_lux: int = 300
-    sda_target_pct: float = 50.0
+Program = Literal['Office', 'Residential', 'Retail', 'School', 'Hospital', 'Industrial']
 
 
-class StudyRequest(BaseModel):
-    room: RoomInput
-    context_buildings: list[ContextBuildingInput] = Field(
-        default_factory=list,
-        description='Other buildings represented as opaque context geometry for this study.'
-    )
-    run_sda: bool = False
-    location: Optional[str] = Field(
-        None,
-        description='Server-side EPW location name. Required when run_sda=true.'
-    )
-    quality: str = Field('full', pattern='^(draft|full)$')
-    thresholds: Thresholds = Field(default_factory=Thresholds)
+class DaylightOptions(BaseModel):
+    """What the daylight job computes."""
+    run_sda: bool = Field(False, description='Also run annual daylight and return DA / sDA.')
+    da_lux: int = Field(300, gt=0)
+    sda_target_pct: float = Field(50.0, ge=0, le=100)
+    quality: Literal['preview', 'final'] = 'final'
 
 
 class ConstructionNames(BaseModel):
+    """Construction names as listed by the EPSM service."""
     wall: str = Field(..., min_length=1)
     floor: str = Field(..., min_length=1)
     roof: str = Field(..., min_length=1)
     window: str = Field(..., min_length=1)
 
 
-class EnergyRequest(BaseModel):
+class EnergyOptions(BaseModel):
+    """What the energy job needs."""
+    constructions: ConstructionNames = Field(description='EPSM construction names.')
+    building_program: Program = 'Office'
+    natural_ventilation: bool = False
+
+
+class _Base(BaseModel):
+    """Fields shared by every request."""
     room: RoomInput
     context_buildings: list[ContextBuildingInput] = Field(default_factory=list)
-    constructions: ConstructionNames
-    building_program: str = 'Office'
-    hvac_system: str = 'Default HVAC'
-    natural_ventilation: bool = False
-    location: str = Field(..., min_length=1)
+    epw: Optional[str] = Field(
+        None,
+        description='EPW file contents. Omit to use the server default weather file.',
+    )
+    pack: bool = Field(
+        True,
+        description='Return large arrays as base64 typed arrays (see README). '
+                    'false returns plain JSON number lists.',
+    )
 
 
-# ── Responses ─────────────────────────────────────────────────────────────────
-
-class StudyLinks(BaseModel):
-    status: str
-    result: str
-    hbjson: str
+class DaylightRequest(_Base):
+    """Body of POST /v1/daylight."""
+    daylight: DaylightOptions = Field(default_factory=DaylightOptions)
 
 
-class StudyQueued(BaseModel):
-    study_id: str
-    status: str
-    sensor_count: int
-    links: StudyLinks
+class EnergyRequest(_Base):
+    """Body of POST /v1/energy."""
+    energy: EnergyOptions
 
 
-class StudyStatus(BaseModel):
-    study_id: str
-    status: str                       # queued | running | complete | failed
-    stage: Optional[str] = None
-    error: Optional[str] = None
+class SimulateRequest(_Base):
+    """Body of POST /v1/simulate."""
+    daylight: DaylightOptions = Field(default_factory=DaylightOptions)
+    energy: EnergyOptions
 
 
-class DfSummary(BaseModel):
-    mean_df: float
-    min_df: float
-    max_df: float
+# ── Responses ────────────────────────────────────────────────────────────────
+
+class PackedArray(BaseModel):
+    """A base64-encoded little-endian typed array. value = raw / scale."""
+    dtype: str          # 'uint16' | 'float32'
+    scale: float = 1.0
+    shape: list[int]
+    data: str
 
 
-class DfResult(BaseModel):
-    summary: DfSummary
-    values: list[float]
+ArrayField = Union[PackedArray, list]
 
 
-class SdaSummary(BaseModel):
-    sda_300_50: float
-    sensor_count: int
-    passing_sensors: int
-
-
-class SdaResult(BaseModel):
-    summary: SdaSummary
-    values: list[float]
-    pass_: list[bool] = Field(alias='pass')
-
-    model_config = {'populate_by_name': True}
-
-
-class SensorGridResultInfo(BaseModel):
+class SensorGridInfo(BaseModel):
+    """Where one floor's sensors sit in the flat result arrays."""
     identifier: str
     full_identifier: str
     room_identifier: str = ''
@@ -212,35 +227,44 @@ class SensorGridResultInfo(BaseModel):
     sensor_count: int
 
 
-class StudyResult(BaseModel):
-    study_id: str
-    df: DfResult
-    sda: Optional[SdaResult] = None
-    sensor_points: list[list[float]] = Field(
-        default_factory=list,
-        description='Sensor coordinates in Honeybee world [x, y, z], ordered to match df.values.'
+class DfSummary(BaseModel):
+    """Daylight factor statistics (%)."""
+    mean_df: float
+    min_df: float
+    max_df: float
+
+
+class SdaSummary(BaseModel):
+    """Spatial daylight autonomy: % of sensors meeting DA >= target."""
+    sda: float
+    da_lux: int
+    sda_target_pct: float
+    sensor_count: int
+    passing_sensors: int
+
+
+class DaylightResult(BaseModel):
+    """Response of POST /v1/daylight."""
+    weather: str
+    seconds: float
+    sensor_count: int
+    sensor_grids: list[SensorGridInfo] = Field(
+        description='One slice per floor into the flat sensor arrays.'
     )
-    sensor_grids: list[SensorGridResultInfo] = Field(
-        default_factory=list,
-        description='Ordered slices locating each floor grid in the flattened result arrays.',
+    sensor_points: ArrayField = Field(description='[x, y, z] per sensor, shape (n, 3).')
+    df_summary: DfSummary
+    df: ArrayField = Field(description='Daylight factor (%) per sensor.')
+    sda_summary: Optional[SdaSummary] = None
+    da: Optional[ArrayField] = Field(
+        None, description='Daylight autonomy (%) per sensor. A sensor passes sDA when da >= sda_target_pct.'
     )
-
-
-class EnergyQueued(BaseModel):
-    study_id: str
-    status: str
-
-
-class EnergyStatus(BaseModel):
-    study_id: str
-    status: str
-    stage: Optional[str] = None
-    error: Optional[str] = None
 
 
 class EnergyResult(BaseModel):
-    study_id: str
-    status: str
+    """Response of POST /v1/energy (kWh, and kWh/m2 of floor area)."""
+    weather: str
+    seconds: float
+    floor_area_m2: float
     heating_energy_kwh: float
     cooling_energy_kwh: float
     total_energy_kwh: float
@@ -248,21 +272,17 @@ class EnergyResult(BaseModel):
     cooling_demand_kwh_m2: float
     total_energy_kwh_m2: float
     monthly_heat_balance: Optional[Dict[str, Any]] = None
+    heating_hourly_kwh: Optional[ArrayField] = Field(None, description='8760 hourly values, kWh.')
+    cooling_hourly_kwh: Optional[ArrayField] = Field(None, description='8760 hourly values, kWh.')
 
 
-# ── Locations ─────────────────────────────────────────────────────────────────
+class SimulateResult(BaseModel):
+    """Response of POST /v1/simulate."""
+    daylight: DaylightResult
+    energy: EnergyResult
 
-class LocationItem(BaseModel):
-    id: str
-    label: str
-
-
-class LocationsResponse(BaseModel):
-    locations: list[LocationItem]
-
-
-# ── Errors ────────────────────────────────────────────────────────────────────
 
 class ErrorResponse(BaseModel):
+    """Every error looks like this."""
     error: str
     message: str

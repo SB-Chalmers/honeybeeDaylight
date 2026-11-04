@@ -1,0 +1,71 @@
+# Build the image, run the tests inside it, run one real EnergyPlus simulation,
+# then start the whole stack with docker compose exactly as on the workstation.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t simulation-service .
+
+      - name: Unit and API tests
+        run: |
+          docker run --rm -e FOTON_BACKEND=reference -v "$PWD/tests:/app/tests" \
+            simulation-service sh -c "pip install -q pytest && pytest -q tests"
+
+      - name: EnergyPlus smoke run
+        run: |
+          docker run --rm -i simulation-service python - <<'EOF'
+          import tempfile, time
+          from simulation.energy.simulate import run_energy
+
+          layer = {'material_name': 'Concrete', 'thickness_m': 0.2, 'conductivity_w_mk': 1.1,
+                   'density_kg_m3': 2000, 'specific_heat_j_kgk': 900}
+          constructions = {kind: {'name': f'{kind}_c', 'u_value_w_m2k': 1.4, 'layers': [layer]}
+                           for kind in ('wall', 'floor', 'roof', 'window')}
+          # 6 floors: the 4 middle floors run as one zone with multiplier 4.
+          room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': 6,
+                  'floor_to_floor_height': 3.2, 'wwr': 0.4}
+          with tempfile.TemporaryDirectory() as folder:
+              start = time.time()
+              result = run_energy(room, [], constructions, 'Office', False,
+                                  'weather/gothenburg_tmyx.epw', folder)
+          print(f'energy run: {time.time() - start:.1f} s')
+          print({k: v for k, v in result.items() if not isinstance(v, (list, dict))})
+          annual = result['heating_energy_kwh']
+          hourly = sum(result['heating_hourly_kwh'] or [])
+          monthly = sum(result['monthly_heat_balance']['heating']) * result['floor_area_m2']
+          print(f'heating kWh: annual {annual:.0f}, hourly sum {hourly:.0f}, monthly sum {monthly:.0f}')
+          assert annual > 0, 'no heating energy'
+          assert len(result['heating_hourly_kwh']) == 8760, 'hourly heating missing'
+          # Catches a zone multiplier applied twice (or not at all) in the parsers.
+          assert abs(hourly - annual) < 0.05 * annual, 'hourly heating does not add up to annual'
+          assert abs(monthly - annual) < 0.05 * annual, 'monthly heating does not add up to annual'
+          EOF
+
+      - name: Docker compose stack answers a request with an API key
+        run: |
+          # The same commands as the README, with a CI key and no GPU:
+          # the override drops the NVIDIA reservation and Foton runs on the CPU.
+          cp .env.example .env
+          sed -i 's/^APP_KEYS=.*/APP_KEYS=ci:ci-key/; s/^FOTON_BACKEND=.*/FOTON_BACKEND=reference/' .env
+          printf 'services:\n  daylight:\n    deploy: !reset {}\n' > ci.override.yml
+          docker compose -f docker-compose.yml -f ci.override.yml up -d --wait
+          docker compose ps
+          # A tiny room at preview quality, so the CPU fallback answers in seconds.
+          echo '{"room": {"footprint_coordinates": [[0,0],[4,0],[4,3],[0,3]], "wwr": 0.4,
+                 "sensor_grid": {"x_dim": 1.0, "y_dim": 1.0}}, "daylight": {"quality": "preview"}}' > scripts/ci-room.json
+          timeout 300 docker compose -f docker-compose.yml -f ci.override.yml run --rm -v "$PWD/scripts:/scripts" api \
+            python /scripts/client.py --url http://api:8000 --key ci-key --path /v1/daylight --payload /scripts/ci-room.json
+
+      - name: Logs if the stack failed
+        if: failure()
+        run: docker compose logs --tail 100

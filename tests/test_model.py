@@ -5,12 +5,11 @@ Covers: room geometry from footprint, orientation, floor elevation,
         per-cardinal WWR assignment, shading, sensor grid dimensions.
 """
 
-import math
 
 import pytest
 
 from simulation.inputs import load_room_inputs
-from simulation.model import build_model, export_model
+from simulation.model import build_model
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -202,19 +201,35 @@ class TestContextBuildings:
         assert all(shade.is_detached for shade in model.shades)
 
 
-# ── Export ────────────────────────────────────────────────────────────────────
+# ── Walls shared with neighbouring buildings ──────────────────────────────────
 
-class TestExportModel:
-    def test_writes_hbjson(self, tmp_path):
-        model, _ = build_model(cfg())
-        path = export_model(model, str(tmp_path))
-        assert path.endswith('model.hbjson')
-        assert (tmp_path / 'model.hbjson').exists()
+class TestSharedWalls:
+    """Edge 1 (x = 8) is shared with a neighbour on floors 1 and 2 of a 3-storey building."""
 
-    def test_exported_json_is_valid(self, tmp_path):
-        import json
-        model, _ = build_model(cfg())
-        path = export_model(model, str(tmp_path))
-        with open(path) as f:
-            data = json.load(f)
-        assert data.get('type') == 'Model'
+    @staticmethod
+    def walls(selected_floor_number):
+        model, _ = build_model(cfg(floors=3, selected_floor_number=selected_floor_number,
+                                   shared_floors_by_edge=[[], [1, 2], [], []]))
+        return [f for f in model.rooms[0].faces if str(f.type) == 'Wall']
+
+    def test_shared_wall_is_adiabatic_without_windows(self):
+        shared_wall = self.walls(1)[1]
+        assert str(shared_wall.boundary_condition) == 'Adiabatic'
+        assert len(shared_wall.apertures) == 0
+
+    def test_other_walls_keep_windows(self):
+        others = [wall for i, wall in enumerate(self.walls(1)) if i != 1]
+        assert all(str(wall.boundary_condition) == 'Outdoors' for wall in others)
+        assert all(len(wall.apertures) > 0 for wall in others)
+
+    def test_floor_above_the_neighbour_keeps_windows(self):
+        wall = self.walls(3)[1]
+        assert str(wall.boundary_condition) == 'Outdoors'
+        assert len(wall.apertures) > 0
+
+
+def test_shared_walls_follow_each_floor_in_all_floor_mode():
+    model, _ = build_model(cfg(floors=3, simulate_all_floors=True,
+                               shared_floors_by_edge=[[], [1, 2], [], []]))
+    shared = [[f for f in room.faces if str(f.type) == 'Wall'][1] for room in model.rooms]
+    assert [str(wall.boundary_condition) for wall in shared] == ['Adiabatic', 'Adiabatic', 'Outdoors']

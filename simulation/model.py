@@ -5,12 +5,14 @@ Build a Honeybee Model with one or more SensorGrids from validated inputs.
 
 Public API
 ----------
-build_model(cfg) -> (Model, SensorGrid)
+build_model(cfg, context_buildings) -> (Model, SensorGrid or SensorGridCollection)
+
+This is the daylight model: detailed windows (one per window module, centred
+in the storey), overhangs and fins. The energy model is built separately in
+energy/idf_builder.py with simpler windows.
 """
 
-import json
 import math
-import os
 
 from honeybee.model import Model
 from honeybee.room import Room
@@ -21,6 +23,7 @@ from ladybug_geometry.geometry3d.pointvector import Point3D
 from ladybug_geometry.geometry3d.polyface import Polyface3D
 
 from .inputs import GRID_DIM
+from .shared_walls import make_adiabatic, shared_edges_on_floor
 
 
 class SensorGridCollection(tuple):
@@ -28,10 +31,12 @@ class SensorGridCollection(tuple):
 
     @property
     def count(self) -> int:
+        """Total sensors over all floors."""
         return sum(grid.count for grid in self)
 
     @property
     def sensors(self) -> tuple:
+        """All sensors, floor by floor."""
         return tuple(sensor for grid in self for sensor in grid.sensors)
 
 
@@ -45,6 +50,7 @@ def _cardinal_from_normal(normal) -> str:
 
 
 def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
+    """Extrude the (rotated) footprint into the Room for one storey."""
     coords = list(cfg['footprint_coordinates'])
     if coords[0] != coords[-1]:
         coords.append(coords[0])
@@ -57,7 +63,11 @@ def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
     return Room.from_polyface3d(identifier, polyface)
 
 
-def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
+def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
+    """Add rectangular windows by ratio, overhangs and fins; make shared walls adiabatic.
+
+    Shading depth = wall thickness (the window reveal) + any extra depth.
+    """
     wwr = cfg['wwr_by_cardinal']
     edge_wwr = cfg.get('wwr_by_edge')
     window_width = float(cfg.get('window_width', 1.2))
@@ -82,7 +92,11 @@ def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
     sill_height = max(0.0, (floor_height - window_height) / 2.0)
     centerline_separation = max(window_width + window_spacing, 0.01)
 
-    for face, ratio in zip(walls, ratios):
+    shared = shared_edges_on_floor(cfg, floor_number)
+    for index, (face, ratio) in enumerate(zip(walls, ratios)):
+        if index in shared:
+            make_adiabatic(face)
+            continue
         if ratio <= 0:
             continue
         face.apertures_by_ratio_rectangle(
@@ -103,6 +117,7 @@ def _apply_wwr_and_shading(room: Room, cfg: dict) -> None:
 
 
 def _sensor_grid(room: Room, cfg: dict, identifier: str) -> SensorGrid:
+    """Sensor grid over the room floor (room[0] is the floor face), facing up."""
     g = cfg.get('sensor_grid') or {}
     grid = SensorGrid.from_face3d(
         identifier,
@@ -166,7 +181,7 @@ def build_model(cfg: dict, context_buildings: list[dict] | None = None):
         )
         grid_identifier = f'floor_{suffix}_grid' if all_floors else 'floor_grid'
         room = _room_from_footprint(cfg, floor_number, room_identifier)
-        _apply_wwr_and_shading(room, cfg)
+        _apply_wwr_and_shading(room, cfg, floor_number)
         rooms.append(room)
         grids.append(_sensor_grid(room, cfg, grid_identifier))
 
@@ -178,12 +193,3 @@ def build_model(cfg: dict, context_buildings: list[dict] | None = None):
     for grid in grids:
         model.properties.radiance.add_sensor_grid(grid)
     return model, SensorGridCollection(grids) if all_floors else grids[0]
-
-
-def export_model(model: Model, folder: str) -> str:
-    """Write model HBJSON to folder and return the file path."""
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, 'model.hbjson')
-    with open(path, 'w') as f:
-        json.dump(model.to_dict(), f)
-    return path

@@ -1,8 +1,8 @@
-"""Local EnergyPlus runner using the same Docker image as EPSM.
+"""Run EnergyPlus locally and parse its results.
 
-Drop-in replacement for the EPSM HTTP submission path. Runs
-nrel/energyplus:23.2.0 directly via Docker and parses the HTML summary
-that EnergyPlus writes (eplustbl.htm → output.htm).
+Uses the ``energyplus`` binary on PATH (or ``EPLUS_BINARY``). The Docker image
+ships EnergyPlus 24.2. Each run gets its own folder, so runs are independent
+and can happen in parallel.
 """
 
 from __future__ import annotations
@@ -12,84 +12,35 @@ import shutil
 import subprocess
 from pathlib import Path
 
-EPLUS_IMAGE = os.environ.get('EPLUS_DOCKER_IMAGE', 'nrel/energyplus:24.2.0')
-EPLUS_PLATFORM = os.environ.get('EPLUS_DOCKER_PLATFORM', 'linux/amd64')
+EPLUS_BINARY = os.environ.get('EPLUS_BINARY', 'energyplus')
 EPLUS_TIMEOUT = int(os.environ.get('EPLUS_TIMEOUT_SECONDS', '600'))
 
-# Optional path to a native EnergyPlus binary.  When set (or auto-detected via
-# PATH), it is used instead of Docker — avoids QEMU emulation on Apple Silicon.
-EPLUS_BINARY = os.environ.get('EPLUS_BINARY', '')
 
+def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dict | None = None) -> dict:
+    """Run EnergyPlus and return annual totals, monthly balance and hourly loads.
 
-def _find_native_eplus() -> str | None:
-    """Return path to a native EnergyPlus binary, or None if not found."""
-    import shutil
-    if EPLUS_BINARY:
-        return EPLUS_BINARY if os.path.isfile(EPLUS_BINARY) else None
-    # Common install locations on macOS and Linux
-    for candidate in ('energyplus', 'EnergyPlus'):
-        path = shutil.which(candidate)
-        if path:
-            return path
-    for prefix in (
-        '/usr/local/EnergyPlus-23-2-0',
-        '/Applications/EnergyPlus-23-2-0',
-        '/usr/local/EnergyPlus-24-2-0',
-        '/Applications/EnergyPlus-24-2-0',
-        '/Applications/OpenStudio-3.9.0/EnergyPlus',  # OpenStudio-bundled ARM64 binary
-        '/Applications/OpenStudio-3.8.0/EnergyPlus',
-        '/Applications/OpenStudio-3.7.0/EnergyPlus',
-    ):
-        candidate = os.path.join(prefix, 'energyplus')
-        if os.path.isfile(candidate):
-            return candidate
-    return None
+    ``multipliers`` maps upper-case zone names to zone multipliers. EnergyPlus
+    reports zone variables (people, lights, windows...) for one copy of the
+    zone, so the monthly balance scales them. Ideal-loads variables already
+    include the multiplier and are left as they are.
 
-
-def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
-    """Run EnergyPlus via Docker and return parsed energy totals.
-
-    Blocking call — safe to use from a background thread.
-
-    Returns
-    -------
-    dict with keys:
-        heating_energy_kwh, cooling_energy_kwh, total_energy_kwh, floor_area_m2
-
-    Raises
-    ------
-    RuntimeError if EnergyPlus does not produce HTML output.
+    Blocking. Raises RuntimeError if EnergyPlus produces no HTML summary.
     """
     sim_path = Path(sim_dir)
     sim_path.mkdir(parents=True, exist_ok=True)
-
     shutil.copy2(idf_path, sim_path / 'input.idf')
     shutil.copy2(epw_path, sim_path / 'weather.epw')
 
-    native = _find_native_eplus()
-    if native:
-        # Native binary — no Docker, no emulation. Works on macOS ARM64 and Linux.
-        cmd = [
-            native,
-            '--weather', str(sim_path / 'weather.epw'),
-            '--output-directory', str(sim_path),
-            '--expandobjects', '--readvars',
-            str(sim_path / 'input.idf'),
-        ]
-    else:
-        # Docker fallback — works natively on Linux x86_64 deployment.
-        # Will segfault on Apple Silicon due to QEMU emulation of amd64 image.
-        cmd = [
-            'docker', 'run', '--rm',
-            '-v', f'{sim_path}:/var/simdata/energyplus',
-            '--platform', EPLUS_PLATFORM,
-            EPLUS_IMAGE,
-            'energyplus',
-            '--weather', '/var/simdata/energyplus/weather.epw',
-            '--output-directory', '/var/simdata/energyplus',
-            '--expandobjects', '--readvars',
-            '/var/simdata/energyplus/input.idf',
-        ]
+    binary = shutil.which(EPLUS_BINARY)
+    if not binary:
+        raise RuntimeError(f'EnergyPlus binary not found ({EPLUS_BINARY!r}). Set EPLUS_BINARY.')
+    cmd = [
+        binary,
+        '--weather', str(sim_path / 'weather.epw'),
+        '--output-directory', str(sim_path),
+        '--expandobjects',
+        str(sim_path / 'input.idf'),
+    ]
 
     proc = subprocess.run(
         cmd,
@@ -99,39 +50,75 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
         cwd=str(sim_path),
     )
 
-    (sim_path / 'run_output.log').write_text(
-        f"COMMAND: {' '.join(cmd)}\n\n"
-        f"STDOUT:\n{proc.stdout}\n\nSTDERR:\n{proc.stderr}"
-    )
-
-    # Rename standard EnergyPlus output files to the names the rest of the
-    # backend expects (same mapping as EPSM's services.py).
-    for src, dst in {
-        'eplusout.err': 'output.err',
-        'eplustbl.htm': 'output.htm',
-        'eplusout.eso': 'output.eso',
-        'eplusout.csv': 'output.csv',
-        'eplusout.mtr': 'output.mtr',
-        'eplusout.sql': 'output.sql',
-        'eplusout.html': 'output.html',
-    }.items():
-        src_p = sim_path / src
-        if src_p.exists():
-            src_p.rename(sim_path / dst)
-
-    htm = sim_path / 'output.htm'
-    if not htm.exists() and (sim_path / 'output.html').exists():
-        htm = sim_path / 'output.html'
-
+    htm = sim_path / 'eplustbl.htm'
     if not htm.exists():
-        err_file = sim_path / 'output.err'
+        err_file = sim_path / 'eplusout.err'
         err_tail = err_file.read_text(errors='replace')[-3000:] if err_file.exists() else '(no error file)'
         raise RuntimeError(
             f'EnergyPlus produced no HTML results table (exit={proc.returncode}). '
-            f'Last errors:\n{err_tail}'
+            f'Last errors:\n{err_tail}\nstderr:\n{proc.stderr[-2000:]}'
         )
 
-    return _parse_htm(htm)
+    result = _parse_htm(htm, multipliers)
+    # Hourly loads come straight from eplusout.eso (no ReadVarsESO/CSV step).
+    eso_path = sim_path / 'eplusout.eso'
+    if eso_path.exists():
+        result.update(parse_hourly_loads(eso_path))
+    else:
+        result.update({'heating_hourly_kwh': None, 'cooling_hourly_kwh': None})
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Hourly heating / cooling series (eplusout.eso)
+# ---------------------------------------------------------------------------
+
+_HOURLY_COLUMNS = {
+    'heating_hourly_kwh': 'ZONE IDEAL LOADS SUPPLY AIR SENSIBLE HEATING ENERGY [J](HOURLY)',
+    'cooling_hourly_kwh': 'ZONE IDEAL LOADS SUPPLY AIR SENSIBLE COOLING ENERGY [J](HOURLY)',
+}
+
+
+def parse_hourly_loads(eso_path: Path) -> dict:
+    """Sum hourly ideal-loads heating and cooling across zones, in kWh per hour.
+
+    ESO dictionary lines look like ``472,1,KEY,Variable [J] !Hourly``; data
+    lines are ``472,value`` after a ``2,...`` time stamp. Only the last
+    environment (the run period) is kept.
+    """
+    codes: dict[str, set[str]] = {key: set() for key in _HOURLY_COLUMNS}
+    with open(eso_path, encoding='utf-8', errors='replace') as stream:
+        for line in stream:
+            if line.startswith('End of Data Dictionary'):
+                break
+            parts = line.rstrip('\n').split(',', 3)
+            if len(parts) < 4 or '!' not in parts[3]:
+                continue
+            variable, _, frequency = parts[3].partition('!')
+            frequency = frequency.split('[')[0].strip()
+            name = f'{parts[2]}:{variable.strip()}({frequency})'.upper()
+            for key, suffix in _HOURLY_COLUMNS.items():
+                if name.endswith(suffix):
+                    codes[key].add(parts[0])
+
+        series: dict[str, list[float]] = {key: [] for key in codes}
+        new_stamp = False
+        for line in stream:
+            code, _, value = line.partition(',')
+            if code == '1':  # new environment
+                series = {key: [] for key in codes}
+            elif code == '2':
+                new_stamp = True
+            else:
+                for key, key_codes in codes.items():
+                    if code in key_codes:
+                        if new_stamp:
+                            for values in series.values():
+                                values.append(0.0)
+                            new_stamp = False
+                        series[key][-1] += float(value) / 3_600_000
+
+    return {key: (values or None) for key, values in series.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +145,7 @@ def _table_value(soup, table_title: str, row_label: str, col_index: int = 1):
     return None
 
 
-def _parse_htm(htm_path: Path) -> dict:
+def _parse_htm(htm_path: Path, multipliers: dict | None = None) -> dict:
     """Parse EnergyPlus HTML summary tables and return absolute energy values."""
     from bs4 import BeautifulSoup
 
@@ -189,7 +176,7 @@ def _parse_htm(htm_path: Path) -> dict:
     total_kwh = (total_gj * GJ_TO_KWH) if total_gj else (heating_kwh + cooling_kwh)
 
     # Monthly heat balance from Output:Table:Monthly
-    monthly = _parse_monthly_balance(soup, area or 1.0)
+    monthly = _parse_monthly_balance(soup, area or 1.0, multipliers)
 
     return {
         'heating_energy_kwh': round(heating_kwh, 1),
@@ -223,7 +210,7 @@ _COL_PATTERNS = [
 ]
 
 
-def _parse_monthly_balance(soup, floor_area_m2: float) -> dict | None:
+def _parse_monthly_balance(soup, floor_area_m2: float, multipliers: dict | None = None) -> dict | None:
     """Parse all 'Custom Monthly Report' tables produced by Output:Table:Monthly.
 
     EnergyPlus emits one table per zone keyname.  The table is transposed:
@@ -241,6 +228,11 @@ def _parse_monthly_balance(soup, floor_area_m2: float) -> dict | None:
         rows = tbl.find_all('tr')
         if len(rows) < 2:
             continue
+        # Each table is preceded by "For: <b>KEY</b>"; zone tables need scaling.
+        for_label = b_tag.find_previous(string=lambda text: text and text.strip().startswith('For:'))
+        zone_tag = for_label.find_next('b') if for_label else None
+        zone = zone_tag.get_text(strip=True).upper() if zone_tag else ''
+        multiplier = (multipliers or {}).get(zone, 1)
 
         # --- Header: map column index → (component_key, J→kWh factor) ---
         hdr_cells = rows[0].find_all(['td', 'th'])
@@ -290,7 +282,8 @@ def _parse_monthly_balance(soup, floor_area_m2: float) -> dict | None:
 
                 # Heating and cooling from IdealLoads appear once per zone;
                 # sum across zones to get building total.
-                aggregated[key][month_idx] += val_kwh
+                scale = 1 if key in ('heating', 'cooling') else multiplier
+                aggregated[key][month_idx] += val_kwh * scale
 
     if not aggregated:
         return None

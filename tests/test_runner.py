@@ -1,115 +1,58 @@
-"""Tests for the Foton daylight runner."""
+"""Foton daylight runner (reference CPU backend, preview quality for speed)."""
 
-import json
-from types import SimpleNamespace
+import numpy as np
+import pytest
 
 from simulation.inputs import load_room_inputs
-from simulation.model import build_model, export_model
-from simulation.results import parse_df, parse_sensor_grids, parse_sensor_points
-from simulation import runner
+from simulation.model import build_model
+from simulation.runner import run_daylight, sda_summary
+
+EPW = 'weather/gothenburg_tmyx.epw'
 
 
-def _small_model(tmp_path):
-    cfg = load_room_inputs({
-        'footprint_coordinates': [[0, 0], [4, 0], [4, 4], [0, 4]],
-        'sensor_grid': {'x_dim': 2.0, 'y_dim': 2.0, 'offset': 0.75},
-    })
-    context = [{
-        'footprint_coordinates': [[6, 0], [8, 0], [8, 2], [6, 2]],
-        'floors': 2,
-        'floor_to_floor_height': 3.0,
-    }]
-    model, grid = build_model(cfg, context)
-    model_path = export_model(model, str(tmp_path))
-    return model_path, grid.count
-
-
-def test_run_df_writes_api_compatible_outputs(tmp_path, monkeypatch):
-    model_path, sensor_count = _small_model(tmp_path)
+@pytest.fixture(autouse=True)
+def cpu_backend(monkeypatch):
     monkeypatch.setenv('FOTON_BACKEND', 'reference')
 
-    runner.run_df(model_path, str(tmp_path), sensor_count, draft=True)
 
-    result = parse_df(str(tmp_path))
-    points = parse_sensor_points(str(tmp_path))
-    assert len(result['values']) == sensor_count
-    assert len(points) == sensor_count
-    assert result['summary']['min_df'] >= 0
-    assert (tmp_path / 'daylight_factor' / 'metadata.json').is_file()
-    metadata = json.loads(
-        (tmp_path / 'daylight_factor' / 'metadata.json').read_text()
-    )
-    assert metadata['quality']['quality'] == 'final'
-    assert metadata['quality']['sky_basis'] == 'tregenza'
-    assert metadata['quality']['sky_rows'] == 146
-
-
-def test_run_annual_forwards_foton_quality_and_thresholds(tmp_path, monkeypatch):
-    captured = {}
-
-    def fake_run_annual_daylight(**kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(metadata={'sensor_count': 4})
-
-    monkeypatch.setattr(runner, 'run_annual_daylight', fake_run_annual_daylight)
-    monkeypatch.setenv('FOTON_BACKEND', 'reference')
-
-    runner.run_annual(
-        'model.hbjson',
-        str(tmp_path),
-        4,
-        'weather.wea',
-        draft=False,
-        da_lux=500,
-        sda_target_pct=60,
-    )
-
-    assert captured['backend'] == 'reference'
-    assert captured['quality'] == 'final'
-    assert captured['sky_density'] == 1
-    assert captured['direct_samples'] == 64
-    assert captured['maximum_samples'] == 4096
-    assert captured['maximum_bounces'] == 1
-    assert captured['threshold'] == 500.0
-    assert captured['target_time'] == 60.0
-    assert captured['output_folder'] == tmp_path / 'annual_daylight'
-    assert captured['export_illuminance'] is False
-
-
-def test_run_annual_rejects_changed_sensor_count(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        runner,
-        'run_annual_daylight',
-        lambda **kwargs: SimpleNamespace(metadata={'sensor_count': 3}),
-    )
-
-    try:
-        runner.run_annual('model.hbjson', str(tmp_path), 4, 'weather.wea')
-    except RuntimeError as error:
-        assert 'prepared 3 sensors' in str(error)
-    else:
-        raise AssertionError('sensor-count mismatch should fail')
-
-
-def test_run_df_flattens_multiple_floor_grids_in_manifest_order(tmp_path, monkeypatch):
+def _model(floors=2):
     cfg = load_room_inputs({
         'footprint_coordinates': [[0, 0], [4, 0], [4, 4], [0, 4]],
-        'floors': 2,
+        'floors': floors,
         'simulate_all_floors': True,
         'floor_to_floor_height': 3.0,
         'sensor_grid': {'x_dim': 2.0, 'y_dim': 2.0, 'offset': 0.75},
     })
-    model, grids = build_model(cfg)
-    sensor_count = grids.count
-    model_path = export_model(model, str(tmp_path))
-    monkeypatch.setenv('FOTON_BACKEND', 'reference')
+    return build_model(cfg)
 
-    runner.run_df(model_path, str(tmp_path), sensor_count, draft=False)
 
-    result = parse_df(str(tmp_path))
-    points = parse_sensor_points(str(tmp_path))
-    manifest = parse_sensor_grids(str(tmp_path))
-    assert len(result['values']) == len(points) == sensor_count
-    assert [grid['floor_number'] for grid in manifest] == [1, 2]
-    assert [grid['start_sensor_index'] for grid in manifest] == [0, grids[0].count]
-    assert sorted({point[2] for point in points}) == [0.75, 3.75]
+def test_df_is_flat_and_ordered_by_floor():
+    model, grids = _model()
+    result = run_daylight(model, grids.count, EPW, quality='preview')
+
+    assert result['df'].shape == (grids.count,)
+    assert result['points'].shape == (grids.count, 3)
+    assert result['da'] is None
+    assert [g['floor_number'] for g in result['grids']] == [1, 2]
+    assert [g['start_sensor_index'] for g in result['grids']] == [0, grids[0].count]
+    assert sorted({round(float(z), 2) for z in result['points'][:, 2]}) == [0.75, 3.75]
+    assert np.all(result['df'] >= 0)
+
+
+def test_sda_is_index_aligned_with_df():
+    model, grids = _model(floors=1)
+    result = run_daylight(model, grids.count, EPW, run_sda=True, quality='preview')
+    assert result['da'].shape == result['df'].shape
+    assert np.all((result['da'] >= 0) & (result['da'] <= 100))
+
+
+def test_sensor_count_mismatch_fails():
+    model, grids = _model(floors=1)
+    with pytest.raises(RuntimeError, match='prepared'):
+        run_daylight(model, grids.count + 1, EPW, quality='preview')
+
+
+def test_sda_summary_counts_passing_sensors():
+    summary = sda_summary(np.array([10.0, 50.0, 80.0, 49.9]), 300, 50)
+    assert summary['passing_sensors'] == 2
+    assert summary['sda'] == 50.0

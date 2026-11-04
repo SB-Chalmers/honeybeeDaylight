@@ -1,18 +1,28 @@
-"""Generate an EnergyPlus IDF from the editor's room payload using honeybee-energy.
+"""Turn the editor's room payload into an EnergyPlus IDF with honeybee-energy.
 
-This replaces the previous hand-written IDF builder with a pipeline that uses
-honeybee-energy's validated model → IDF writer, producing the same format as
-the IDFs that EPSM's known-good simulations use.
+Every step maps to a stock Honeybee component, so a run can be rebuilt in
+Grasshopper:
+
+- one Room per floor group (HB Room from Solid), stacked identical middle
+  floors merged with a zone multiplier (HB Room multiplier);
+- floors and ceilings between storeys adiabatic, shared party walls adiabatic
+  (HB Properties / boundary condition);
+- one window per wall at the requested ratio (HB Apertures by Ratio);
+- program type, EPSM constructions and an unlimited ideal air system
+  (HB Program / Construction Set / Ideal Air);
+- context buildings as detached shades (HB Shade);
+- SimulationParameter: no sizing, 4 timesteps/hour, FullExterior.
 """
 
 from __future__ import annotations
 
 import re
 
-from .mappers import hvac_identifier, program_identifier
+from ..shared_walls import make_adiabatic, shared_edges_on_floor
 
 
 def footprint_area(points: list[list[float]]) -> float:
+    """Polygon area (shoelace formula) of an [x, y] footprint, closed or not."""
     points = points[:-1] if points[0] == points[-1] else points
     return abs(sum(points[i][0] * points[(i + 1) % len(points)][1] -
                    points[(i + 1) % len(points)][0] * points[i][1]
@@ -33,6 +43,7 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
     from honeybee_energy.constructionset import ConstructionSet
 
     def _opaque(record: dict) -> OpaqueConstruction:
+        """Layered opaque construction from an EPSM record (defaults fill gaps)."""
         materials = []
         for layer in record.get('layers', []):
             mid = _safe_id(layer['material_name'])
@@ -48,6 +59,7 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
         return OpaqueConstruction(_safe_id(record['name']), materials)
 
     def _window(record: dict) -> WindowConstruction:
+        """Simple glazing system from the EPSM U-value (SHGC fixed at 0.40)."""
         u_value = record.get('u_value_w_m2k', 2.0)
         name = _safe_id(record['name']) + '_glaz'
         glaz = EnergyWindowMaterialSimpleGlazSys(name, u_value, 0.40)
@@ -65,23 +77,45 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
     return cs
 
 
-# Map of frontend building_program strings to honeybee-energy program type identifiers
-_PROGRAM_MAP = {
+# Frontend building_program names -> honeybee-energy program type identifiers.
+# All of these exist in honeybee-energy-standards 2.3.x.
+PROGRAMS = {
     'Office': 'Generic Office Program',
-    'Residential': '2013::MidRiseApartment::Apartment',
-    'Retail': '2013::StripMall::WholeBuilding',
-    'School': '2013::SecondarySchool::Classroom',
-    'Hospital': '2013::Hospital::Office',
-    'Industrial': '2013::Warehouse::Office',
+    'Residential': '2019::MidriseApartment::Apartment',
+    'Retail': '2019::Retail::Retail',
+    'School': '2019::SecondarySchool::Classroom',
+    'Hospital': '2019::Hospital::Office',
+    'Industrial': '2019::Warehouse::Office',
 }
 
 
+def floor_groups(room: dict) -> list[list[int]]:
+    """Group floors that can share one zone with a multiplier.
+
+    The ground and top floors always stand alone. Consecutive middle floors are
+    merged unless their shared (adiabatic) walls differ.
+    """
+    floors = int(room.get('floors', 1))
+    groups: list[list[int]] = []
+    previous = None
+    for floor in range(1, floors + 1):
+        key = (floor == 1, floor == floors, frozenset(shared_edges_on_floor(room, floor)))
+        if key == previous and not key[0] and not key[1]:
+            groups[-1].append(floor)
+        else:
+            groups.append([floor])
+        previous = key
+    return groups
+
+
 def build_idf(room: dict, constructions: dict, building_program: str,
-              hvac_system: str, natural_ventilation: bool,
-              context_buildings: list[dict] | None = None) -> tuple[str, float]:
+              natural_ventilation: bool,
+              context_buildings: list[dict] | None = None) -> tuple[str, float, dict]:
     """Generate a complete EnergyPlus IDF using honeybee-energy.
 
-    Returns (idf_text, floor_area_m2).
+    Returns (idf_text, floor_area_m2, {ZONE NAME: multiplier}). The parser
+    needs the multipliers because EnergyPlus reports zone variables (people,
+    lights, windows...) for a single copy of a multiplied zone.
     """
     import math
     from honeybee.model import Model
@@ -104,65 +138,58 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     wwr_map = room.get('wwr_by_cardinal') or {d: room.get('wwr', 0.4)
                                                for d in ('north', 'east', 'south', 'west')}
 
-    # Window geometry parameters — same defaults as the daylight model.
-    window_height = float(room.get('window_height', 1.5))
-    window_width = float(room.get('window_width', 1.2))
-    window_spacing = float(room.get('window_spacing', 0.3))
-    h_depth = float(room.get('wall_thickness', 0.0)) + float(room.get('additional_horizontal_shading_depth', 0.0))
-    v_depth = float(room.get('wall_thickness', 0.0)) + float(room.get('additional_vertical_shading_depth', 0.0))
-    sill_height = max(0.0, (height - window_height) / 2.0)
-    centerline_separation = max(window_width + window_spacing, 0.01)
-
     def _cardinal(normal) -> str:
+        """Nearest cardinal direction for an outward wall normal."""
         az = (math.degrees(math.atan2(normal.x, normal.y)) + 360.0) % 360.0
         cardinals = [('north', 0.0), ('east', 90.0), ('south', 180.0), ('west', 270.0)]
         return min(cardinals, key=lambda c: min((az - c[1]) % 360, (c[1] - az) % 360))[0]
 
-    all_rooms = []
-    for floor_idx in range(floors):
-        z0 = floor_idx * height
-        pts = [Point3D(x, y, z0) for x, y in coords]
-        face = Face3D(pts)
-        face = face.rotate_xy(math.radians(orientation), Point3D(0, 0, z0))
-        poly = Polyface3D.from_offset_face(face, height)
-        r = Room.from_polyface3d(f'Zone_{floor_idx + 1}', poly)
+    from honeybee.boundarycondition import boundary_conditions
+    from honeybee_energy.hvac.idealair import IdealAirSystem
+    from honeybee.altnumber import no_limit
 
-        # Apply windows — identical logic to _apply_wwr_and_shading in simulation/model.py.
+    all_rooms = []
+    for group in floor_groups(room):
+        first, last = group[0], group[-1]
+        name = f'Floor_{first}' if first == last else f'Floors_{first}_{last}'
+        z0 = (first - 1) * height
+        face = Face3D([Point3D(x, y, z0) for x, y in coords])
+        face = face.rotate_xy(math.radians(orientation), Point3D(0, 0, z0))
+        r = Room.from_polyface3d(name, Polyface3D.from_offset_face(face, height))
+        # Identical stacked floors are simulated once and multiplied (HB Room multiplier).
+        r.multiplier = len(group)
+
+        # Only the bottom floor touches the ground and only the top floor has a
+        # roof; floors between storeys exchange no heat with identical neighbours.
+        for f in r.faces:
+            if str(f.type) == 'Floor':
+                f.boundary_condition = boundary_conditions.ground if first == 1 else boundary_conditions.adiabatic
+            elif str(f.type) == 'RoofCeiling':
+                f.boundary_condition = boundary_conditions.outdoors if last == floors else boundary_conditions.adiabatic
+
+        # One window per wall with the requested glazing ratio (HB Apertures by Ratio).
+        # Energy only needs glazed area and orientation; the daylight model keeps
+        # the individual windows. Fins and overhangs are left out of the energy model.
         edge_wwr = room.get('wwr_by_edge')
         walls = [f for f in r.faces if str(f.type) == 'Wall']
         if edge_wwr is not None and len(edge_wwr) == len(walls):
             ratios = [float(v) for v in edge_wwr]
         else:
             ratios = [float(wwr_map.get(_cardinal(f.normal), 0.0)) for f in walls]
+        shared = shared_edges_on_floor(room, first)  # same for every floor in the group
+        for edge_index, (wall_face, ratio) in enumerate(zip(walls, ratios)):
+            if edge_index in shared:
+                make_adiabatic(wall_face)
+            elif ratio > 0:
+                wall_face.apertures_by_ratio(ratio, 0.01)
 
-        for wall_face, ratio in zip(walls, ratios):
-            if ratio <= 0:
-                continue
-            wall_face.apertures_by_ratio_rectangle(
-                ratio=ratio,
-                aperture_height=window_height,
-                sill_height=sill_height,
-                horizontal_separation=centerline_separation,
-                vertical_separation=window_spacing,
-            )
-            # Note: fins/overhangs are omitted from the energy IDF.
-            # Attached shading objects (overhang + 2 fins × N windows × mirror copy)
-            # multiply into hundreds of surfaces that cause a segfault in EP 24.2
-            # during shading initialisation. Solar gain is already captured via the
-            # window SHGC, so omitting them has negligible effect on annual totals.
-
-        # Assign energy properties
-        prog_id = _PROGRAM_MAP.get(building_program, 'Generic Office Program')
-        prog = program_type_by_identifier(prog_id).duplicate()
-
-        # When natural ventilation is enabled, raise the cooling setpoint to 50 °C
-        # so the IdealLoads system never activates mechanical cooling — the zone
-        # runs free and any summer overheating is unmet.  Heating is unaffected.
+        prog = program_type_by_identifier(PROGRAMS[building_program]).duplicate()
+        # Natural ventilation: raise the cooling setpoint to 50 °C so the ideal
+        # loads never cool mechanically. Heating is unaffected.
         if natural_ventilation and prog.setpoint:
             from honeybee_energy.schedule.ruleset import ScheduleRuleset
             no_cool_sched = ScheduleRuleset.from_constant_value(
-                f'NoCooling_{floor_idx + 1}', 50.0,
-                prog.setpoint.cooling_schedule.schedule_type_limit
+                f'NoCooling_{name}', 50.0, prog.setpoint.cooling_schedule.schedule_type_limit
             )
             new_setpoint = prog.setpoint.duplicate()
             new_setpoint.cooling_schedule = no_cool_sched
@@ -170,13 +197,9 @@ def build_idf(room: dict, constructions: dict, building_program: str,
 
         r.properties.energy.program_type = prog
         r.properties.energy.construction_set = _construction_set_from_epsm(constructions)
-        # Create a fresh IdealAirSystem (not the shared library object, which is locked)
-        # and set NoLimit so EnergyPlus never tries to autosize capacities at runtime.
-        # Autosize + sizing disabled causes a SIGSEGV in EP 24.2 on Linux.
-        # cooling_limit = no_limit requires economizer_type = 'NoEconomizer'.
-        from honeybee_energy.hvac.idealair import IdealAirSystem
-        from honeybee.altnumber import no_limit
-        ideal_air = IdealAirSystem(f'Zone_{floor_idx + 1}_IdealAir')
+        # A fresh ideal air system with no capacity limits, so EnergyPlus never
+        # autosizes (autosize with sizing disabled crashes EP 24.2 on Linux).
+        ideal_air = IdealAirSystem(f'{name}_IdealAir')
         ideal_air.economizer_type = 'NoEconomizer'
         ideal_air.heating_limit = no_limit
         ideal_air.cooling_limit = no_limit
@@ -208,36 +231,35 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     sim.simulation_control.do_plant_sizing = False
     sim.simulation_control.run_for_sizing_periods = False
     sim.simulation_control.run_for_run_periods = True
+    # 4 timesteps per hour instead of 6: ~25 % faster, annual heating and
+    # cooling within 0.3 % (HB Simulation Parameter: _timestep_ = 4).
+    sim.timestep = 4
+    # Exterior shading only, without reflections: much cheaper, and context
+    # buildings still cast shadows (HB Shadow Calculation: FullExterior).
+    sim.shadow_calculation.solar_distribution = 'FullExterior'
+    # Only the summary table we parse, and no SQLite output (HB Simulation Output).
+    # SQLite also segfaults EnergyPlus 24.2 on macOS ARM64.
+    sim.output.summary_reports = ['AnnualBuildingUtilityPerformanceSummary']
+    sim.output.include_sqlite = False
     sim_idf = sim.to_idf()
     # Align Version with the installed EnergyPlus binary (OpenStudio 3.9 ships 24.2).
     # honeybee-energy writes 23.2 by default; update to avoid version mismatch.
     sim_idf = re.sub(r'(Version,\s*)[\d\.]+', r'\g<1>24.2', sim_idf)
-    # Strip Output:SQLite — it causes a segfault in EnergyPlus 24.2 on macOS ARM64
-    # and is not needed since we parse results from the HTML summary table.
-    sim_idf = re.sub(r'\nOutput:SQLite,\s*\n[^\n]+;\s*', '\n', sim_idf)
     # Remove the hardcoded 2017 year from RunPeriod so EnergyPlus uses the EPW calendar.
     # A mismatched year causes EnergyPlus to skip all environment periods silently.
     sim_idf = re.sub(r' 2017,(\s+!- (?:start|end) year)', r' ,\1', sim_idf)
 
-    # Add district heating/cooling meters — ZoneHVAC:IdealLoadsAirSystem reports its
-    # energy as DistrictHeating / DistrictCooling, so these meters populate the End Uses
-    # table columns that EPSM's HTML parser reads (col 12 = District Heating/Cooling).
+    # Outputs we parse (see local_runner.py):
+    # - annual meters fill the End Uses table in eplustbl.htm (ideal loads
+    #   report as District Heating/Cooling);
+    # - hourly ideal-loads heating/cooling go to eplusout.eso for the time series;
+    # - the monthly table gives the heat balance chart, one table per zone.
     _extra = (
-        '\nOutput:Meter,\n  DistrictHeating:Building,\n  Annual;\n\n'
-        'Output:Meter,\n  DistrictCooling:Building,\n  Annual;\n\n'
-        'Output:Meter,\n  Electricity:Building,\n  Annual;\n'
-        # Zone-level monthly variables for the heat balance chart.
-        # Use IdealLoads heating/cooling energy instead of district meters
-        # because the district meters need explicit monthly tracking.
-        '\nOutput:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Monthly;\n'
-        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Monthly;\n'
-        'Output:Variable,*,Zone People Sensible Heating Energy,Monthly;\n'
-        'Output:Variable,*,Zone Lights Electricity Energy,Monthly;\n'
-        'Output:Variable,*,Zone Electric Equipment Electricity Energy,Monthly;\n'
-        'Output:Variable,*,Zone Windows Total Heat Gain Energy,Monthly;\n'
-        'Output:Variable,*,Zone Infiltration Sensible Heat Gain Energy,Monthly;\n'
-        'Output:Variable,*,Zone Infiltration Sensible Heat Loss Energy,Monthly;\n'
-        # Monthly tabular report — months as rows, variables as columns in HTML.
+        '\nOutput:Meter,DistrictHeating:Building,Annual;\n'
+        'Output:Meter,DistrictCooling:Building,Annual;\n'
+        'Output:Meter,Electricity:Building,Annual;\n'
+        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly;\n'
+        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Hourly;\n'
         '\nOutput:Table:Monthly,\n'
         '  Monthly Heat Balance,\n'
         '  2,\n'
@@ -252,4 +274,5 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     )
     idf_text = sim_idf + _extra + '\n' + model_to_idf(model)
     floor_area = footprint_area(room['footprint_coordinates']) * floors
-    return idf_text, floor_area
+    multipliers = {r.identifier.upper(): r.multiplier for r in all_rooms}
+    return idf_text, floor_area, multipliers

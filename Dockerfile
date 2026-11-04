@@ -1,58 +1,33 @@
-# ── Stage 0: EnergyPlus source ───────────────────────────────────────────────
+# One image for the API and both Celery workers (docker-compose.yml picks the command).
+
+# EnergyPlus 24.2, without its example files and docs.
 FROM nrel/energyplus:24.2.0 AS eplus
+WORKDIR /EnergyPlus-24.2.0-94a887817b-Linux-Ubuntu22.04-x86_64
+RUN rm -rf ExampleFiles WeatherData Documentation DataSets MacroDataSets
 
-# ── Stage 1: Python dependencies ─────────────────────────────────────────────
-FROM python:3.13-slim AS deps
+FROM python:3.13.18-slim
 
-WORKDIR /build
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-
-
-# ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM python:3.13-slim
-
-# System libraries required by Foton/Vulkan, gendaymtx, numpy, and EnergyPlus
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget ca-certificates unzip \
-        libglu1-mesa libxext6 libxi6 libxrender1 \
-        libgomp1 libvulkan1 \
+# libvulkan1 lets Foton find a GPU. libgomp1 and libx11-6 are needed by EnergyPlus.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libvulkan1 libgomp1 libx11-6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Foton performs all daylight transport. Its annual Honeybee adapter currently
-# uses Radiance gendaymtx only to convert EPW/WEA weather into a sky matrix.
-# https://github.com/LBNL-ETA/Radiance/releases/tag/04ef26bb
-RUN wget -q -O /tmp/radiance.zip \
-      "https://github.com/LBNL-ETA/Radiance/releases/download/04ef26bb/Radiance_04ef26bb_Linux.zip" \
-    && unzip -q /tmp/radiance.zip -d /tmp/ \
-    && tar -xzf /tmp/radiance-5.4.04ef26bb60-Linux.tar.gz -C / --strip-components=1 \
-    && rm -f /tmp/radiance.zip /tmp/radiance-5.4.04ef26bb60-Linux.tar.gz
+COPY --from=eplus /EnergyPlus-24.2.0-94a887817b-Linux-Ubuntu22.04-x86_64 /opt/energyplus
+ENV PATH="/opt/energyplus:${PATH}" \
+    LD_LIBRARY_PATH=/opt/energyplus \
+    PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1
+# Fail the build if EnergyPlus is missing a shared library.
+RUN ! ldd /opt/energyplus/energyplus | grep 'not found'
 
-ENV PATH="/usr/local/radiance/bin:${PATH}"
-ENV RAYPATH="/usr/local/radiance/lib"
-ENV RADIANCE_BIN="/usr/local/radiance/bin"
-ENV FOTON_BACKEND="auto"
-
-# EnergyPlus 24.2.0 — copied from official NREL image (avoids Docker-in-Docker at runtime)
-COPY --from=eplus /EnergyPlus-24.2.0-94a887817b-Linux-Ubuntu22.04-x86_64 /usr/local/EnergyPlus-24-2-0
-
-ENV PATH="/usr/local/EnergyPlus-24-2-0:${PATH}"
-# EnergyPlus bundles libpython3.12 and libenergyplusapi inside its own directory
-ENV LD_LIBRARY_PATH="/usr/local/EnergyPlus-24-2-0"
-
-# Python packages (copied from build stage — no pip, no build tools in image)
-COPY --from=deps /install /usr/local
-
-# Application code
 WORKDIR /app
-COPY api/        ./api/
-COPY simulation/ ./simulation/
-COPY weather/    ./weather/
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Runtime directories (overridden by docker-compose volumes in production)
-RUN mkdir -p studies data
+COPY api/ api/
+COPY worker/ worker/
+COPY simulation/ simulation/
+COPY weather/ weather/
 
 EXPOSE 8000
-
-# 2 workers handles a typical classroom load; tune via WORKERS env var
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers ${WORKERS:-2}"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
