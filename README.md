@@ -109,33 +109,21 @@ Settings live in `.env` (see `.env.example`). The ones you may want to change:
 
 ## Deployment
 
-Every push to `main` deploys to the workstation through a GitHub Actions
-self-hosted runner (`.github/workflows/deploy.yml`). The runner connects out to
-GitHub, so it works behind the Chalmers firewall with no static IP or SSH.
+On the workstation (Ubuntu with Docker, the NVIDIA driver and the NVIDIA
+Container Toolkit installed):
 
-One-time setup on the workstation, by someone with access:
+```bash
+sudo systemctl enable docker            # containers come back after a reboot
+git clone https://github.com/SB-Chalmers/honeybeeDaylight.git && cd honeybeeDaylight
+cp .env.example .env                    # set APP_KEYS
+docker compose up -d --build
+```
 
-1. Put the settings in place: `sudo mkdir -p /opt/simulation-service`, copy
-   `.env.example` to `/opt/simulation-service/.env`, fill in `APP_KEYS`, and make
-   it readable by the runner's user.
-2. On GitHub, open **Settings → Actions → Runners → New self-hosted runner**
-   (Linux x64) and run the download and `./config.sh` commands it shows, adding
-   `--labels simulation` to `config.sh`. Use a user in the `docker` group.
-3. Install it as a service so it survives reboots:
-   `sudo ./svc.sh install && sudo ./svc.sh start`.
-4. Test it: **Actions → Deploy → Run workflow**.
+To update: `git pull && docker compose up -d --build`. To roll back:
+`git checkout <commit> && docker compose up -d --build`.
 
-The workflow only runs on pushes to `main` (never on pull requests), so code
-from forks never reaches the machine.
-
-## Workstation upkeep
-
-`ops/maintenance.sh` installs OS updates nightly (and reboots if needed) and
-emails the superusers when disk, memory, CPU or GPU reach 90 %, or when more
-than 40 jobs are waiting in the queues (`QUEUE_LIMIT`). Setup
-instructions are at the top of the script. The containers come back after a
-reboot by themselves (`restart: unless-stopped`) as long as Docker is enabled
-(`sudo systemctl enable docker`).
+Ubuntu installs security updates by itself (`unattended-upgrades`). Leave
+driver and Docker upgrades for a quiet day, not during a course.
 
 ## Local development
 
