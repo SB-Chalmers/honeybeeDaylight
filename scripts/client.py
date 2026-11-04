@@ -1,4 +1,4 @@
-"""Reference client: signs a request, gzips it, sends it and unpacks the result.
+"""Reference client: signs a request, sends it and unpacks the result.
 
     python scripts/client.py --url http://localhost:8000 --app heath --secret <secret>
 
@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import gzip
 import hashlib
 import hmac
 import json
@@ -35,18 +34,17 @@ EXAMPLE = {
 
 
 def signed_post(client: httpx.Client, path: str, payload: dict, app: str, secret: str) -> httpx.Response:
-    """POST json with the gzip body and signature headers the API expects."""
+    """POST JSON with the signature headers the API expects."""
     body = json.dumps(payload, separators=(',', ':')).encode()
     ts = str(int(time.time()))
     message = f'{ts}\nPOST\n{path}\n{hashlib.sha256(body).hexdigest()}'
     headers = {
         'content-type': 'application/json',
-        'content-encoding': 'gzip',
         'x-app-id': app,
         'x-timestamp': ts,
         'x-signature': hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest(),
     }
-    return client.post(path, content=gzip.compress(body), headers=headers)
+    return client.post(path, content=body, headers=headers)
 
 
 def unpack(value):

@@ -1,6 +1,5 @@
-"""API: signing, gzip request bodies, routing to the Celery tasks (run eagerly)."""
+"""API: signing, routing to the Celery tasks (run eagerly)."""
 
-import gzip
 import json
 import time
 
@@ -68,13 +67,6 @@ def test_bad_signatures_are_rejected(client, kw):
 
 def test_unsigned_request_is_rejected(client):
     assert client.post('/v1/daylight', json={'room': ROOM}).status_code == 401
-
-
-def test_gzip_request_body_is_accepted(client):
-    body = json.dumps({'room': ROOM}).encode()
-    headers = {**signed('/v1/daylight', body), 'content-encoding': 'gzip'}
-    response = client.post('/v1/daylight', content=gzip.compress(body), headers=headers)
-    assert response.status_code == 200, response.text
 
 
 def test_bad_input_from_worker_is_400(client, monkeypatch):

@@ -179,8 +179,7 @@ class _Base(BaseModel):
     context_buildings: list[ContextBuildingInput] = Field(default_factory=list)
     epw: Optional[str] = Field(
         None,
-        description='EPW file contents. Omit to use the server default weather file. '
-                    'Send the request with Content-Encoding: gzip to keep it small.',
+        description='EPW file contents. Omit to use the server default weather file.',
     )
     pack: bool = Field(
         True,

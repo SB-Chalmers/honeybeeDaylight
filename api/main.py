@@ -18,7 +18,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from worker.celery_app import app as celery
 
-from .gzip_request import GzipRequestMiddleware
 from .routes import router
 
 app = FastAPI(
@@ -27,7 +26,7 @@ app = FastAPI(
     version='0.2.0',
 )
 
-# Middleware runs outermost-last: inflate gzip requests, gzip responses, CORS.
+# Gzip responses (result arrays are the big part of the traffic), and CORS.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get('ALLOWED_ORIGINS', '*').split(','),
@@ -35,7 +34,6 @@ app.add_middleware(
     allow_headers=['*'],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
-app.add_middleware(GzipRequestMiddleware)
 
 app.include_router(router)
 

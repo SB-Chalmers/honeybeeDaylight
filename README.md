@@ -59,8 +59,8 @@ Full schemas are at `/docs`. A minimal request:
 
 ### Small payloads
 
-- Send requests with `Content-Encoding: gzip`. Responses are gzipped when the
-  client sends `Accept-Encoding: gzip`.
+- Requests are plain JSON (about 1 KB for a building). Responses are gzipped
+  when the client sends `Accept-Encoding: gzip` (browsers always do).
 - Large arrays come back packed: `{"dtype", "scale", "shape", "data"}`, where
   `data` is base64 of a little-endian typed array and `value = raw / scale`.
   DF and DA use `uint16` (0.01 % steps, 2 bytes per sensor). Points and
