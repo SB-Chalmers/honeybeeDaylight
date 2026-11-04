@@ -22,6 +22,7 @@ from ..shared_walls import make_adiabatic, shared_edges_on_floor
 
 
 def footprint_area(points: list[list[float]]) -> float:
+    """Polygon area (shoelace formula) of an [x, y] footprint, closed or not."""
     points = points[:-1] if points[0] == points[-1] else points
     return abs(sum(points[i][0] * points[(i + 1) % len(points)][1] -
                    points[(i + 1) % len(points)][0] * points[i][1]
@@ -42,6 +43,7 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
     from honeybee_energy.constructionset import ConstructionSet
 
     def _opaque(record: dict) -> OpaqueConstruction:
+        """Layered opaque construction from an EPSM record (defaults fill gaps)."""
         materials = []
         for layer in record.get('layers', []):
             mid = _safe_id(layer['material_name'])
@@ -57,6 +59,7 @@ def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
         return OpaqueConstruction(_safe_id(record['name']), materials)
 
     def _window(record: dict) -> WindowConstruction:
+        """Simple glazing system from the EPSM U-value (SHGC fixed at 0.40)."""
         u_value = record.get('u_value_w_m2k', 2.0)
         name = _safe_id(record['name']) + '_glaz'
         glaz = EnergyWindowMaterialSimpleGlazSys(name, u_value, 0.40)
@@ -136,6 +139,7 @@ def build_idf(room: dict, constructions: dict, building_program: str,
                                                for d in ('north', 'east', 'south', 'west')}
 
     def _cardinal(normal) -> str:
+        """Nearest cardinal direction for an outward wall normal."""
         az = (math.degrees(math.atan2(normal.x, normal.y)) + 360.0) % 360.0
         cardinals = [('north', 0.0), ('east', 90.0), ('south', 180.0), ('west', 270.0)]
         return min(cardinals, key=lambda c: min((az - c[1]) % 360, (c[1] - az) % 360))[0]

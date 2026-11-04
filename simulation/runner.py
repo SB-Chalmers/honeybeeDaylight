@@ -23,6 +23,7 @@ def _backend() -> str:
 
 
 def _floor_number(room_identifier: str) -> int | None:
+    """Floor number from a room id like 'Daylight_Room_Floor_03' (None if absent)."""
     match = re.search(r'_Floor_(\d+)$', room_identifier or '')
     return int(match.group(1)) if match else None
 
@@ -99,6 +100,7 @@ def run_daylight(
 
 
 def df_summary(df: np.ndarray) -> dict:
+    """Mean, min and max daylight factor (%)."""
     return {
         'mean_df': round(float(np.mean(df)), 3),
         'min_df': round(float(np.min(df)), 3),
@@ -107,6 +109,7 @@ def df_summary(df: np.ndarray) -> dict:
 
 
 def sda_summary(da: np.ndarray, da_lux: float, sda_target_pct: float) -> dict:
+    """sDA = share of sensors whose DA (% of occupied hours >= da_lux) meets the target."""
     passing = int(np.count_nonzero(da >= sda_target_pct))
     total = int(da.size)
     return {

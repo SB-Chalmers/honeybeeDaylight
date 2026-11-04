@@ -42,12 +42,14 @@ app.include_router(router)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_error(request: Request, exc: StarletteHTTPException):
+    """Return every HTTP error as {"error", "message"}."""
     detail = exc.detail if isinstance(exc.detail, dict) else {'error': 'http_error', 'message': str(exc.detail)}
     return JSONResponse(status_code=exc.status_code, content=detail)
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
+    """Return the first validation problem as one readable message."""
     first = exc.errors()[0] if exc.errors() else {}
     field = ' → '.join(str(part) for part in first.get('loc', []))
     return JSONResponse(status_code=422, content={
@@ -57,6 +59,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
 
 @app.get('/', include_in_schema=False)
 def root():
+    """Point people at the interactive docs."""
     return {'message': 'Simulation API', 'docs': '/docs'}
 
 

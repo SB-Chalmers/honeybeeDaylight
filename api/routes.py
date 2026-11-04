@@ -34,6 +34,7 @@ _ERRORS = {code: {'model': ErrorResponse} for code in (400, 401, 500, 504)}
 
 
 def _payload(request) -> dict:
+    """Turn the validated request into the plain dict the Celery task receives."""
     data = request.model_dump(mode='json')
     data['room'] = request.room.to_simulation_dict()
     return data
@@ -56,11 +57,13 @@ async def _result(job):
 
 @router.post('/daylight', response_model=DaylightResult, responses=_ERRORS)
 async def daylight(request: DaylightRequest):
+    """Daylight factor per sensor, plus DA/sDA when daylight.run_sda is true."""
     return await _result(celery_app.daylight.delay(_payload(request)))
 
 
 @router.post('/energy', response_model=EnergyResult, responses=_ERRORS)
 async def energy(request: EnergyRequest):
+    """Annual heating/cooling, monthly heat balance and hourly loads."""
     return await _result(celery_app.energy.delay(_payload(request)))
 
 

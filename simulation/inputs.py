@@ -59,6 +59,7 @@ DEFAULT_ROOM_INPUTS = {
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _deep_merge(base: dict, updates: dict) -> dict:
+    """Copy of base with updates applied; nested dicts are merged, not replaced."""
     merged = copy.deepcopy(base)
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):

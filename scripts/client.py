@@ -35,6 +35,7 @@ EXAMPLE = {
 
 
 def signed_post(client: httpx.Client, path: str, payload: dict, app: str, secret: str) -> httpx.Response:
+    """POST json with the gzip body and signature headers the API expects."""
     body = json.dumps(payload, separators=(',', ':')).encode()
     ts = str(int(time.time()))
     message = f'{ts}\nPOST\n{path}\n{hashlib.sha256(body).hexdigest()}'

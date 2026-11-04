@@ -5,8 +5,8 @@
 #
 # Daylight runs on the GPU queue (one job at a time per GPU).
 # Energy runs on the CPU queue (ENERGY_CONCURRENCY EnergyPlus runs at once).
-# Worker processes are replaced after 200 jobs (--max-tasks-per-child), so a
-# slow memory leak cannot build up during a long class.
+# Worker processes are replaced after 200 jobs (WORKER_MAX_TASKS_PER_CHILD in
+# worker/celery_app.py), so a slow leak cannot build up during a long class.
 
 x-app: &app
   build: .
@@ -39,7 +39,7 @@ services:
 
   daylight:
     <<: *app
-    command: celery -A worker.celery_app worker -Q daylight --concurrency 1 --max-tasks-per-child 200 --loglevel INFO
+    command: celery -A worker.celery_app worker -Q daylight --concurrency 1 --loglevel INFO
     environment:
       NVIDIA_DRIVER_CAPABILITIES: all   # 'graphics' is needed for Vulkan
     # Needs the NVIDIA Container Toolkit on the host. Remove this block on a
@@ -54,4 +54,4 @@ services:
 
   energy:
     <<: *app
-    command: sh -c 'exec celery -A worker.celery_app worker -Q energy --concurrency "$${ENERGY_CONCURRENCY:-$$(nproc)}" --max-tasks-per-child 200 --loglevel INFO'
+    command: sh -c 'exec celery -A worker.celery_app worker -Q energy --concurrency "$${ENERGY_CONCURRENCY:-$$(nproc)}" --loglevel INFO'

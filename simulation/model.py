@@ -5,7 +5,11 @@ Build a Honeybee Model with one or more SensorGrids from validated inputs.
 
 Public API
 ----------
-build_model(cfg) -> (Model, SensorGrid)
+build_model(cfg, context_buildings) -> (Model, SensorGrid or SensorGridCollection)
+
+This is the daylight model: detailed windows (one per window module, centred
+in the storey), overhangs and fins. The energy model is built separately in
+energy/idf_builder.py with simpler windows.
 """
 
 import math
@@ -27,10 +31,12 @@ class SensorGridCollection(tuple):
 
     @property
     def count(self) -> int:
+        """Total sensors over all floors."""
         return sum(grid.count for grid in self)
 
     @property
     def sensors(self) -> tuple:
+        """All sensors, floor by floor."""
         return tuple(sensor for grid in self for sensor in grid.sensors)
 
 
@@ -44,6 +50,7 @@ def _cardinal_from_normal(normal) -> str:
 
 
 def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
+    """Extrude the (rotated) footprint into the Room for one storey."""
     coords = list(cfg['footprint_coordinates'])
     if coords[0] != coords[-1]:
         coords.append(coords[0])
@@ -57,6 +64,10 @@ def _room_from_footprint(cfg: dict, floor_number: int, identifier: str) -> Room:
 
 
 def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
+    """Add rectangular windows by ratio, overhangs and fins; make shared walls adiabatic.
+
+    Shading depth = wall thickness (the window reveal) + any extra depth.
+    """
     wwr = cfg['wwr_by_cardinal']
     edge_wwr = cfg.get('wwr_by_edge')
     window_width = float(cfg.get('window_width', 1.2))
@@ -106,6 +117,7 @@ def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
 
 
 def _sensor_grid(room: Room, cfg: dict, identifier: str) -> SensorGrid:
+    """Sensor grid over the room floor (room[0] is the floor face), facing up."""
     g = cfg.get('sensor_grid') or {}
     grid = SensorGrid.from_face3d(
         identifier,

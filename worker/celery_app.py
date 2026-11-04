@@ -46,6 +46,7 @@ app.conf.update(
 
 
 def _run(job, request: dict) -> dict:
+    """Run a job; turn a client mistake into a result the API answers with 400."""
     from .jobs import BadInput
 
     try:
@@ -57,6 +58,7 @@ def _run(job, request: dict) -> dict:
 
 @app.task(name='simulation.daylight')
 def daylight(request: dict) -> dict:
+    """Celery task on the "daylight" (GPU) queue."""
     from .jobs import daylight_job
 
     return _run(daylight_job, request)
@@ -64,6 +66,7 @@ def daylight(request: dict) -> dict:
 
 @app.task(name='simulation.energy')
 def energy(request: dict) -> dict:
+    """Celery task on the "energy" (CPU) queue."""
     from .jobs import energy_job
 
     return _run(energy_job, request)

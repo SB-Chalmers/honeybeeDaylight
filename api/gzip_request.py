@@ -19,6 +19,7 @@ class GzipRequestMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        """Inflate the body (with a size cap against gzip bombs), then pass it on."""
         if scope['type'] != 'http':
             return await self.app(scope, receive, send)
         headers = dict(scope['headers'])
@@ -47,6 +48,7 @@ class GzipRequestMiddleware:
         sent = False
 
         async def replay():
+            """Hand the inflated body to the app as one message."""
             nonlocal sent
             if sent:
                 return await receive()
@@ -57,6 +59,7 @@ class GzipRequestMiddleware:
 
 
 async def _reply(send, status: int, error: str, message: str):
+    """Send a JSON error response straight from the middleware."""
     payload = json.dumps({'error': error, 'message': message}).encode()
     await send({'type': 'http.response.start', 'status': status,
                 'headers': [(b'content-type', b'application/json'),

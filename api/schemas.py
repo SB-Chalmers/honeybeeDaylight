@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, field_validator
 # ── Building description ─────────────────────────────────────────────────────
 
 def _check_footprint(v: list[list[float]]) -> list[list[float]]:
+    """A footprint needs at least 3 [x, y] points."""
     if len(v) < 3:
         raise ValueError('footprint_coordinates must have at least 3 points.')
     for point in v:
@@ -27,12 +28,14 @@ def _check_footprint(v: list[list[float]]) -> list[list[float]]:
 
 
 class SensorGridConfig(BaseModel):
+    """Sensor spacing (m) and height above the floor (m)."""
     x_dim: float = 0.3
     y_dim: float = 0.3
     offset: float = 0.75
 
 
 class WwrByCardinal(BaseModel):
+    """Window-to-wall ratio for walls facing each direction."""
     north: float = Field(0.4, ge=0, le=1)
     east:  float = Field(0.3, ge=0, le=1)
     south: float = Field(0.25, ge=0, le=1)
@@ -40,6 +43,7 @@ class WwrByCardinal(BaseModel):
 
 
 class RoomInput(BaseModel):
+    """The building being studied, as the editor describes it."""
     footprint_coordinates: list[list[float]] = Field(
         ..., min_length=3,
         description='2-D polygon [[x,y], ...] in metres; auto-closed.'
@@ -127,6 +131,7 @@ class RoomInput(BaseModel):
 
 
 class ContextBuildingInput(BaseModel):
+    """A neighbouring building; only casts shadows."""
     footprint_coordinates: list[list[float]] = Field(
         ..., min_length=3,
         description='2-D polygon [[x,y], ...] in metres; auto-closed.'
@@ -146,6 +151,7 @@ Program = Literal['Office', 'Residential', 'Retail', 'School', 'Hospital', 'Indu
 
 
 class DaylightOptions(BaseModel):
+    """What the daylight job computes."""
     run_sda: bool = Field(False, description='Also run annual daylight and return DA / sDA.')
     da_lux: int = Field(300, gt=0)
     sda_target_pct: float = Field(50.0, ge=0, le=100)
@@ -153,6 +159,7 @@ class DaylightOptions(BaseModel):
 
 
 class ConstructionNames(BaseModel):
+    """Construction names as listed by the EPSM service."""
     wall: str = Field(..., min_length=1)
     floor: str = Field(..., min_length=1)
     roof: str = Field(..., min_length=1)
@@ -160,12 +167,14 @@ class ConstructionNames(BaseModel):
 
 
 class EnergyOptions(BaseModel):
+    """What the energy job needs."""
     constructions: ConstructionNames = Field(description='EPSM construction names.')
     building_program: Program = 'Office'
     natural_ventilation: bool = False
 
 
 class _Base(BaseModel):
+    """Fields shared by every request."""
     room: RoomInput
     context_buildings: list[ContextBuildingInput] = Field(default_factory=list)
     epw: Optional[str] = Field(
@@ -181,14 +190,17 @@ class _Base(BaseModel):
 
 
 class DaylightRequest(_Base):
+    """Body of POST /v1/daylight."""
     daylight: DaylightOptions = Field(default_factory=DaylightOptions)
 
 
 class EnergyRequest(_Base):
+    """Body of POST /v1/energy."""
     energy: EnergyOptions
 
 
 class SimulateRequest(_Base):
+    """Body of POST /v1/simulate."""
     daylight: DaylightOptions = Field(default_factory=DaylightOptions)
     energy: EnergyOptions
 
@@ -207,6 +219,7 @@ ArrayField = Union[PackedArray, list]
 
 
 class SensorGridInfo(BaseModel):
+    """Where one floor's sensors sit in the flat result arrays."""
     identifier: str
     full_identifier: str
     room_identifier: str = ''
@@ -216,12 +229,14 @@ class SensorGridInfo(BaseModel):
 
 
 class DfSummary(BaseModel):
+    """Daylight factor statistics (%)."""
     mean_df: float
     min_df: float
     max_df: float
 
 
 class SdaSummary(BaseModel):
+    """Spatial daylight autonomy: % of sensors meeting DA >= target."""
     sda: float
     da_lux: int
     sda_target_pct: float
@@ -230,6 +245,7 @@ class SdaSummary(BaseModel):
 
 
 class DaylightResult(BaseModel):
+    """Response of POST /v1/daylight."""
     weather: str
     seconds: float
     sensor_count: int
@@ -246,6 +262,7 @@ class DaylightResult(BaseModel):
 
 
 class EnergyResult(BaseModel):
+    """Response of POST /v1/energy (kWh, and kWh/m2 of floor area)."""
     weather: str
     seconds: float
     floor_area_m2: float
@@ -261,10 +278,12 @@ class EnergyResult(BaseModel):
 
 
 class SimulateResult(BaseModel):
+    """Response of POST /v1/simulate."""
     daylight: DaylightResult
     energy: EnergyResult
 
 
 class ErrorResponse(BaseModel):
+    """Every error looks like this."""
     error: str
     message: str

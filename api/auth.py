@@ -12,7 +12,7 @@ Every request carries three headers:
   X-Signature   hex HMAC-SHA256(secret, f"{timestamp}\n{METHOD}\n{path}\n{sha256_hex(body)}")
 
 ``body`` is the uncompressed request body (empty for GET). See
-scripts/sign_request.py for a reference client.
+scripts/client.py for a reference client.
 
 If APP_KEYS is empty, signing is not enforced (local development only).
 """
@@ -32,6 +32,7 @@ MAX_SKEW_SECONDS = int(os.environ.get('AUTH_MAX_SKEW_SECONDS', '300'))
 
 
 def _load_keys(raw: str) -> dict[str, bytes]:
+    """Parse APP_KEYS ("app:secret,app:secret") into {app_id: secret bytes}."""
     keys = {}
     for item in filter(None, (part.strip() for part in raw.split(','))):
         app_id, sep, secret = item.partition(':')
@@ -47,16 +48,21 @@ if not APP_KEYS:
 
 
 def signature(secret: bytes, timestamp: str, method: str, path: str, body: bytes) -> str:
+    """The hex HMAC-SHA256 a client must send in X-Signature (clients reuse this)."""
     message = f'{timestamp}\n{method.upper()}\n{path}\n{hashlib.sha256(body).hexdigest()}'
     return hmac.new(secret, message.encode(), hashlib.sha256).hexdigest()
 
 
 def _deny(message: str):
+    """Reject the request with 401."""
     raise HTTPException(status_code=401, detail={'error': 'unauthorized', 'message': message})
 
 
 async def require_signature(request: Request) -> str:
-    """FastAPI dependency. Returns the calling app id."""
+    """FastAPI dependency that checks the signature headers. Returns the app id.
+
+    The timestamp window stops a captured request from being replayed later.
+    """
     if not APP_KEYS:
         return 'anonymous'
     app_id = request.headers.get('x-app-id', '')

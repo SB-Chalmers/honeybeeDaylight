@@ -20,6 +20,7 @@ _DTYPES = {'uint8': '<u1', 'uint16': '<u2', 'float32': '<f4'}
 
 
 def pack(values: np.ndarray, dtype: str = 'float32', scale: float = 1.0) -> dict:
+    """Encode values as a packed array. Integer dtypes store round(value * scale), clipped."""
     arr = np.asarray(values, dtype=np.float64)
     if dtype != 'float32':
         info = np.iinfo(np.dtype(_DTYPES[dtype]))
@@ -34,6 +35,7 @@ def pack(values: np.ndarray, dtype: str = 'float32', scale: float = 1.0) -> dict
 
 
 def unpack(packed: dict) -> np.ndarray:
+    """Inverse of pack (used by tests and Python clients)."""
     raw = np.frombuffer(base64.b64decode(packed['data']), dtype=_DTYPES[packed['dtype']])
     return (raw.astype(np.float64) / packed['scale']).reshape(packed['shape'])
 

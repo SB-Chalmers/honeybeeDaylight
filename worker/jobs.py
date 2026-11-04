@@ -36,6 +36,7 @@ class BadInput(ValueError):
 
 
 def _weather(epw: str | None, folder: str) -> tuple[str, str]:
+    """Return (EPW path, label): the default file, or the uploaded text written to folder."""
     if not epw:
         return str(DEFAULT_EPW), f'default:{DEFAULT_EPW.name}'
     if not epw.lstrip().upper().startswith('LOCATION'):
@@ -57,6 +58,7 @@ def build(room: dict, context: list[dict]):
 
 
 def _array(values, pack: bool, kind: str, decimals: int):
+    """Encode a result array: packed base64 (see packing.py) or a rounded JSON list."""
     if values is None:
         return None
     if pack:
@@ -65,6 +67,7 @@ def _array(values, pack: bool, kind: str, decimals: int):
 
 
 def daylight_job(request: dict) -> dict:
+    """Rebuild the model, run Foton DF (and DA/sDA if asked), return compact results."""
     started = time.perf_counter()
     opts = request.get('daylight') or {}
     da_lux = opts.get('da_lux', 300)
@@ -96,6 +99,7 @@ def daylight_job(request: dict) -> dict:
 
 
 def energy_job(request: dict) -> dict:
+    """Fetch constructions from EPSM, run EnergyPlus, return totals and load profiles."""
     started = time.perf_counter()
     opts = request['energy']
     pack = request.get('pack', True)

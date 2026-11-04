@@ -21,12 +21,14 @@ _lock = threading.Lock()
 
 
 def _records(payload) -> list[dict]:
+    """Accept a plain list or a paginated {"results": [...]} / {"data": [...]} reply."""
     if isinstance(payload, dict):
         payload = payload.get('results', payload.get('data', []))
     return [item for item in payload if isinstance(item, dict)]
 
 
 def _catalogue() -> tuple[dict, dict]:
+    """Return ({name: construction}, {name: material}), refetched every CACHE_SECONDS."""
     with _lock:
         stale = time.monotonic() - _cache['at'] > CACHE_SECONDS
         if _cache['constructions'] is None or stale:
