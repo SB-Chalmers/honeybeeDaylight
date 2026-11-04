@@ -51,17 +51,17 @@ jobs:
           assert abs(monthly - annual) < 0.05 * annual, 'monthly heating does not add up to annual'
           EOF
 
-      - name: Docker compose stack answers a signed request
+      - name: Docker compose stack answers a request with an API key
         run: |
-          # The same commands as the README, with a CI secret and no GPU:
+          # The same commands as the README, with a CI key and no GPU:
           # the override drops the NVIDIA reservation and Foton runs on the CPU.
           cp .env.example .env
-          sed -i 's/^APP_KEYS=.*/APP_KEYS=ci:ci-secret/; s/^FOTON_BACKEND=.*/FOTON_BACKEND=reference/' .env
+          sed -i 's/^APP_KEYS=.*/APP_KEYS=ci:ci-key/; s/^FOTON_BACKEND=.*/FOTON_BACKEND=reference/' .env
           printf 'services:\n  daylight:\n    deploy: !reset {}\n' > ci.override.yml
           docker compose -f docker-compose.yml -f ci.override.yml up -d --wait
           docker compose ps
           docker compose -f docker-compose.yml -f ci.override.yml run --rm -v "$PWD/scripts:/scripts" api \
-            python /scripts/client.py --url http://api:8000 --app ci --secret ci-secret --path /v1/daylight
+            python /scripts/client.py --url http://api:8000 --key ci-key --path /v1/daylight
 
       - name: Logs if the stack failed
         if: failure()

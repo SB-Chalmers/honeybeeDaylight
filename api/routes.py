@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from worker import celery_app
 
-from .auth import require_signature
+from .auth import require_api_key
 from .schemas import (
     DaylightRequest,
     DaylightResult,
@@ -29,7 +29,7 @@ from .schemas import (
     SimulateResult,
 )
 
-router = APIRouter(prefix='/v1', dependencies=[Depends(require_signature)])
+router = APIRouter(prefix='/v1', dependencies=[Depends(require_api_key)])
 _ERRORS = {code: {'model': ErrorResponse} for code in (400, 401, 500, 504)}
 
 

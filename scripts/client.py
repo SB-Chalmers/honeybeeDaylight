@@ -1,18 +1,15 @@
-"""Reference client: signs a request, sends it and unpacks the result.
+"""Reference client: sends a request with an API key and unpacks the result.
 
-    python scripts/client.py --url http://localhost:8000 --app heath --secret <secret>
+    python scripts/client.py --url http://localhost:8000 --key <key>
 
-Use it as a template for other clients (the signing is 5 lines).
+Use it as a template for other clients.
 """
 
 from __future__ import annotations
 
 import argparse
 import base64
-import hashlib
-import hmac
 import json
-import time
 
 import httpx
 import numpy as np
@@ -33,18 +30,9 @@ EXAMPLE = {
 }
 
 
-def signed_post(client: httpx.Client, path: str, payload: dict, app: str, secret: str) -> httpx.Response:
-    """POST JSON with the signature headers the API expects."""
-    body = json.dumps(payload, separators=(',', ':')).encode()
-    ts = str(int(time.time()))
-    message = f'{ts}\nPOST\n{path}\n{hashlib.sha256(body).hexdigest()}'
-    headers = {
-        'content-type': 'application/json',
-        'x-app-id': app,
-        'x-timestamp': ts,
-        'x-signature': hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest(),
-    }
-    return client.post(path, content=body, headers=headers)
+def post(client: httpx.Client, path: str, payload: dict, key: str) -> httpx.Response:
+    """POST JSON with the API key header."""
+    return client.post(path, json=payload, headers={'authorization': f'Bearer {key}'})
 
 
 def unpack(value):
@@ -58,15 +46,14 @@ def unpack(value):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8000')
-    parser.add_argument('--app', default='heath')
-    parser.add_argument('--secret', required=True)
+    parser.add_argument('--key', required=True)
     parser.add_argument('--path', default='/v1/simulate', choices=['/v1/simulate', '/v1/daylight', '/v1/energy'])
     parser.add_argument('--payload', help='JSON file with the request (default: built-in example)')
     args = parser.parse_args()
 
     payload = json.load(open(args.payload)) if args.payload else EXAMPLE
     with httpx.Client(base_url=args.url, timeout=1800) as client:
-        response = signed_post(client, args.path, payload, args.app, args.secret)
+        response = post(client, args.path, payload, args.key)
     print(response.status_code, f'{len(response.content)} bytes')
     data = response.json()
     if response.status_code != 200:

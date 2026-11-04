@@ -18,7 +18,7 @@ join by starting workers against the same Redis.
 ## Run it
 
 ```bash
-cp .env.example .env          # set APP_KEYS (one secret per client app)
+cp .env.example .env          # set APP_KEYS (one key per client app)
 docker compose up -d --build
 curl http://localhost:8000/health   # {"status":"ok"}
 ```
@@ -35,7 +35,7 @@ service and Foton runs on the CPU (much slower).
 | `POST` | `/v1/daylight` | Daylight factor per sensor, plus DA/sDA when `daylight.run_sda` is true |
 | `POST` | `/v1/energy` | Annual heating/cooling/total, monthly heat balance, hourly heating and cooling |
 | `POST` | `/v1/simulate` | Both, in parallel |
-| `GET` | `/health` | Liveness (no signature needed) |
+| `GET` | `/health` | Liveness (no key needed) |
 
 Full schemas are at `/docs`. A minimal request:
 
@@ -72,21 +72,26 @@ const raw = new ({uint16: Uint16Array, float32: Float32Array})[p.dtype](bytes.bu
 const values = Array.from(raw, v => v / p.scale);
 ```
 
-### Signing requests
+### API keys
 
-Each client app has an id and a secret in `APP_KEYS` (`heath:<secret>,mr-app:<secret>`).
-Every request sends:
+Each client app has its own key in `APP_KEYS` (`heath:<key>,mr-app:<key>`)
+and sends it as `Authorization: Bearer <key>`. Run the API behind HTTPS so
+keys are not readable in transit. A key in browser JavaScript can be read by
+anyone using the page, so it keeps out other sites and scripts, not a
+determined user. If `APP_KEYS` is empty, keys are not checked (local
+development only). `scripts/client.py` is a working client.
 
+To issue a key, generate one, add it to `APP_KEYS` in `.env`, and reload the API:
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+# APP_KEYS=heath:<key>,mr-app:<key>,new-app:<new key>
+docker compose up -d api      # recreates the API with the new .env
 ```
-X-App-Id:     heath
-X-Timestamp:  <unix seconds>
-X-Signature:  hex(HMAC_SHA256(secret, "<timestamp>\n<METHOD>\n<path>\n<sha256 hex of the uncompressed body>"))
-```
 
-Requests older than 5 minutes are rejected. **Keep the secret on a server.**
-A secret in browser JavaScript is public, so a web app should sign on its
-backend or through a small proxy. `scripts/client.py` is a working client.
-If `APP_KEYS` is empty, signing is off (local development only).
+To revoke one, delete it from `APP_KEYS` and run the same command.
+To rotate one without downtime, add the new key under a second name
+(`heath-2:<new key>`), switch the client over, then remove the old one.
 
 ## Useful commands
 
@@ -100,8 +105,8 @@ If `APP_KEYS` is empty, signing is off (local development only).
 | `docker compose exec redis redis-cli llen daylight` | Daylight jobs waiting in the queue (same for `energy`) |
 | `docker compose exec daylight celery -A worker.celery_app inspect active` | Jobs running right now |
 | `docker compose down` | Stop everything |
-| `python scripts/client.py --secret <s>` | Send one signed test request |
-| `python scripts/stress_test.py --secret <s> --constructions c.json` | 20 students for 20 minutes (see the script for options) |
+| `python scripts/client.py --key <k>` | Send one test request |
+| `python scripts/stress_test.py --key <k> --constructions c.json` | 20 students for 20 minutes (see the script for options) |
 
 Settings live in `.env` (see `.env.example`). The ones you may want to change:
 `APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` (default: CPU cores),
@@ -170,5 +175,5 @@ buildings, each student waiting 5 to 30 s between requests):
 - **Cloud (e.g. AWS EC2):** a `g5`/`g6` instance (NVIDIA A10G/L4) runs this compose file
   as is with the NVIDIA Container Toolkit. A cheaper pattern is a small always-on instance
   for `api` + `redis` + `energy`, with GPU instances for `daylight` started only for class hours.
-  Put HTTPS in front (a load balancer or Caddy/nginx) since signatures stop tampering but not snooping.
+  Put HTTPS in front (a load balancer or Caddy/nginx) so API keys are not sent in the clear.
 - **Bigger classes:** the queue length (`llen daylight`) tells you when to add workers.

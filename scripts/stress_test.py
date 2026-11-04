@@ -4,7 +4,7 @@ Each simulated student sends a request with a randomised building, waits for
 the answer, thinks for a few seconds, and repeats. Prints latency and error
 statistics at the end.
 
-    python scripts/stress_test.py --url http://<host>:8000 --secret <secret> \
+    python scripts/stress_test.py --url http://<host>:8000 --key <key> \
         --students 20 --minutes 20 --constructions constructions.json
 
 ``constructions.json`` holds {"wall": ..., "floor": ..., "roof": ..., "window": ...}
@@ -23,7 +23,7 @@ from collections import Counter
 
 import httpx
 
-from client import signed_post
+from client import post
 
 
 def random_building(rng: random.Random, constructions: dict | None) -> dict:
@@ -49,8 +49,8 @@ def student(index, args, constructions, stop_at, records, lock):
         while time.time() < stop_at:
             started = time.perf_counter()
             try:
-                status = signed_post(client, args.path, random_building(rng, constructions),
-                                     args.app, args.secret).status_code
+                status = post(client, args.path, random_building(rng, constructions),
+                              args.key).status_code
             except httpx.HTTPError as exc:
                 status = type(exc).__name__
             elapsed = time.perf_counter() - started
@@ -63,8 +63,7 @@ def student(index, args, constructions, stop_at, records, lock):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8000')
-    parser.add_argument('--app', default='heath')
-    parser.add_argument('--secret', required=True)
+    parser.add_argument('--key', required=True)
     parser.add_argument('--path', default='/v1/simulate')
     parser.add_argument('--students', type=int, default=20)
     parser.add_argument('--minutes', type=float, default=20)

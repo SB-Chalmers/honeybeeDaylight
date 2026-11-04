@@ -1,7 +1,4 @@
-"""API: signing, routing to the Celery tasks (run eagerly)."""
-
-import json
-import time
+"""API: API keys, routing to the Celery tasks (run eagerly)."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -29,21 +26,13 @@ def client(monkeypatch):
     celery_app.app.conf.task_always_eager = True
     monkeypatch.setattr(jobs, 'daylight_job', lambda request: DAYLIGHT_RESULT)
     monkeypatch.setattr(jobs, 'energy_job', lambda request: ENERGY_RESULT)
-    monkeypatch.setattr(auth, 'APP_KEYS', {'heath': b'secret'})
+    monkeypatch.setattr(auth, 'APP_KEYS', {'secret': 'heath'})
     yield TestClient(app)
     celery_app.app.conf.task_always_eager = False
 
 
-def signed(path, body: bytes, secret=b'secret', app_id='heath', ts=None):
-    ts = str(int(ts or time.time()))
-    return {'x-app-id': app_id, 'x-timestamp': ts,
-            'x-signature': auth.signature(secret, ts, 'POST', path, body),
-            'content-type': 'application/json'}
-
-
-def post(client, path, payload, **kw):
-    body = json.dumps(payload).encode()
-    return client.post(path, content=body, headers=signed(path, body, **kw))
+def post(client, path, payload, key='secret'):
+    return client.post(path, json=payload, headers={'authorization': f'Bearer {key}'})
 
 
 def test_simulate_returns_both_results(client):
@@ -58,14 +47,13 @@ def test_daylight_and_energy_endpoints(client):
     assert post(client, '/v1/energy', {'room': ROOM, 'energy': ENERGY}).status_code == 200
 
 
-@pytest.mark.parametrize('kw', [{'secret': b'wrong'}, {'app_id': 'nobody'}, {'ts': time.time() - 3600}])
-def test_bad_signatures_are_rejected(client, kw):
-    response = post(client, '/v1/daylight', {'room': ROOM}, **kw)
+def test_wrong_key_is_rejected(client):
+    response = post(client, '/v1/daylight', {'room': ROOM}, key='wrong')
     assert response.status_code == 401
     assert response.json()['error'] == 'unauthorized'
 
 
-def test_unsigned_request_is_rejected(client):
+def test_request_without_key_is_rejected(client):
     assert client.post('/v1/daylight', json={'room': ROOM}).status_code == 401
 
 

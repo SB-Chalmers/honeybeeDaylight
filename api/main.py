@@ -2,7 +2,7 @@
 api.main
 ────────
 FastAPI entry point. The API is a thin layer: it validates requests, checks
-signatures, queues jobs on Celery and returns their results.
+API keys, queues jobs on Celery and returns their results.
 
     uvicorn api.main:app
 """
