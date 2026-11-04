@@ -150,6 +150,29 @@ To run the stack without Docker: start `redis-server`, then
 `uvicorn api.main:app --reload`. Energy needs EnergyPlus 24.2 on `PATH`
 (or `EPLUS_BINARY=/path/to/energyplus`).
 
+## Capacity
+
+Measured 2026-11-04 on a 4-core cloud machine (energy only, 1 to 5 storey
+buildings, each student waiting 5 to 30 s between requests):
+
+| Students | Median | p95 | Requests/min |
+|---|---|---|---|
+| 20 | 2.5 s | 10 s | 60 |
+| 40 | 4.3 s | 14 s | 113 |
+| 80 | 23 s | 34 s | 136 (saturated) |
+
+- **Energy** scales with cores: about 34 runs per minute per core, which is
+  roughly **10 active students per core**. Running more workers than cores
+  only adds waiting.
+- **Daylight** runs one job at a time on the GPU (about 1 s per job on an
+  M4 Pro), so it serves about 60 requests per minute. Measure it on the real GPU.
+- **Docker** on Linux gives containers every core and all memory unless
+  limits are set, so leave `cpus:`/`mem_limit:` out of the compose file. If you
+  do limit CPUs with `--cpus`, set `ENERGY_CONCURRENCY` to match, because
+  `nproc` in the container still reports every core. Each EnergyPlus run needs
+  about 200 MB of memory. Docker Desktop (macOS/Windows) runs in a VM with its
+  own CPU and memory limits (Settings → Resources).
+
 ## Scaling later
 
 - **More GPUs in one machine:** run one `daylight` worker per GPU, each limited to its own device.
