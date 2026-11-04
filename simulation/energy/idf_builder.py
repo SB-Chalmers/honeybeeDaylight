@@ -77,12 +77,32 @@ PROGRAMS = {
 }
 
 
+def floor_groups(room: dict) -> list[list[int]]:
+    """Group floors that can share one zone with a multiplier.
+
+    The ground and top floors always stand alone. Consecutive middle floors are
+    merged unless their shared (adiabatic) walls differ.
+    """
+    floors = int(room.get('floors', 1))
+    groups: list[list[int]] = []
+    previous = None
+    for floor in range(1, floors + 1):
+        key = (floor == 1, floor == floors, frozenset(shared_edges_on_floor(room, floor)))
+        if key == previous and not key[0] and not key[1]:
+            groups[-1].append(floor)
+        else:
+            groups.append([floor])
+        previous = key
+    return groups
+
+
 def build_idf(room: dict, constructions: dict, building_program: str,
               natural_ventilation: bool,
-              context_buildings: list[dict] | None = None) -> tuple[str, float]:
+              context_buildings: list[dict] | None = None) -> tuple[str, float, dict]:
     """Generate a complete EnergyPlus IDF using honeybee-energy.
 
-    Returns (idf_text, floor_area_m2).
+    Returns (idf_text, floor_area_m2, {ZONE NAME: multiplier}). Zone-level
+    EnergyPlus outputs are per single zone, so they must be scaled by these.
     """
     import math
     from honeybee.model import Model
@@ -105,69 +125,57 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     wwr_map = room.get('wwr_by_cardinal') or {d: room.get('wwr', 0.4)
                                                for d in ('north', 'east', 'south', 'west')}
 
-    # Window geometry parameters — same defaults as the daylight model.
-    window_height = float(room.get('window_height', 1.5))
-    window_width = float(room.get('window_width', 1.2))
-    window_spacing = float(room.get('window_spacing', 0.3))
-    h_depth = float(room.get('wall_thickness', 0.0)) + float(room.get('additional_horizontal_shading_depth', 0.0))
-    v_depth = float(room.get('wall_thickness', 0.0)) + float(room.get('additional_vertical_shading_depth', 0.0))
-    sill_height = max(0.0, (height - window_height) / 2.0)
-    centerline_separation = max(window_width + window_spacing, 0.01)
-
     def _cardinal(normal) -> str:
         az = (math.degrees(math.atan2(normal.x, normal.y)) + 360.0) % 360.0
         cardinals = [('north', 0.0), ('east', 90.0), ('south', 180.0), ('west', 270.0)]
         return min(cardinals, key=lambda c: min((az - c[1]) % 360, (c[1] - az) % 360))[0]
 
-    all_rooms = []
-    for floor_idx in range(floors):
-        z0 = floor_idx * height
-        pts = [Point3D(x, y, z0) for x, y in coords]
-        face = Face3D(pts)
-        face = face.rotate_xy(math.radians(orientation), Point3D(0, 0, z0))
-        poly = Polyface3D.from_offset_face(face, height)
-        r = Room.from_polyface3d(f'Zone_{floor_idx + 1}', poly)
+    from honeybee.boundarycondition import boundary_conditions
+    from honeybee_energy.hvac.idealair import IdealAirSystem
+    from honeybee.altnumber import no_limit
 
-        # Apply windows — identical logic to _apply_wwr_and_shading in simulation/model.py.
+    all_rooms = []
+    for group in floor_groups(room):
+        first, last = group[0], group[-1]
+        name = f'Floor_{first}' if first == last else f'Floors_{first}_{last}'
+        z0 = (first - 1) * height
+        face = Face3D([Point3D(x, y, z0) for x, y in coords])
+        face = face.rotate_xy(math.radians(orientation), Point3D(0, 0, z0))
+        r = Room.from_polyface3d(name, Polyface3D.from_offset_face(face, height))
+        # Identical stacked floors are simulated once and multiplied (HB Room multiplier).
+        r.multiplier = len(group)
+
+        # Only the bottom floor touches the ground and only the top floor has a
+        # roof; floors between storeys exchange no heat with identical neighbours.
+        for f in r.faces:
+            if str(f.type) == 'Floor':
+                f.boundary_condition = boundary_conditions.ground if first == 1 else boundary_conditions.adiabatic
+            elif str(f.type) == 'RoofCeiling':
+                f.boundary_condition = boundary_conditions.outdoors if last == floors else boundary_conditions.adiabatic
+
+        # One window per wall with the requested glazing ratio (HB Apertures by Ratio).
+        # Energy only needs glazed area and orientation; the daylight model keeps
+        # the individual windows. Fins and overhangs are left out of the energy model.
         edge_wwr = room.get('wwr_by_edge')
         walls = [f for f in r.faces if str(f.type) == 'Wall']
         if edge_wwr is not None and len(edge_wwr) == len(walls):
             ratios = [float(v) for v in edge_wwr]
         else:
             ratios = [float(wwr_map.get(_cardinal(f.normal), 0.0)) for f in walls]
-
-        shared = shared_edges_on_floor(room, floor_idx + 1)
+        shared = shared_edges_on_floor(room, first)  # same for every floor in the group
         for edge_index, (wall_face, ratio) in enumerate(zip(walls, ratios)):
             if edge_index in shared:
                 make_adiabatic(wall_face)
-                continue
-            if ratio <= 0:
-                continue
-            wall_face.apertures_by_ratio_rectangle(
-                ratio=ratio,
-                aperture_height=window_height,
-                sill_height=sill_height,
-                horizontal_separation=centerline_separation,
-                vertical_separation=window_spacing,
-            )
-            # Note: fins/overhangs are omitted from the energy IDF.
-            # Attached shading objects (overhang + 2 fins × N windows × mirror copy)
-            # multiply into hundreds of surfaces that cause a segfault in EP 24.2
-            # during shading initialisation. Solar gain is already captured via the
-            # window SHGC, so omitting them has negligible effect on annual totals.
+            elif ratio > 0:
+                wall_face.apertures_by_ratio(ratio, 0.01)
 
-        # Assign energy properties
-        prog_id = PROGRAMS[building_program]
-        prog = program_type_by_identifier(prog_id).duplicate()
-
-        # When natural ventilation is enabled, raise the cooling setpoint to 50 °C
-        # so the IdealLoads system never activates mechanical cooling — the zone
-        # runs free and any summer overheating is unmet.  Heating is unaffected.
+        prog = program_type_by_identifier(PROGRAMS[building_program]).duplicate()
+        # Natural ventilation: raise the cooling setpoint to 50 °C so the ideal
+        # loads never cool mechanically. Heating is unaffected.
         if natural_ventilation and prog.setpoint:
             from honeybee_energy.schedule.ruleset import ScheduleRuleset
             no_cool_sched = ScheduleRuleset.from_constant_value(
-                f'NoCooling_{floor_idx + 1}', 50.0,
-                prog.setpoint.cooling_schedule.schedule_type_limit
+                f'NoCooling_{name}', 50.0, prog.setpoint.cooling_schedule.schedule_type_limit
             )
             new_setpoint = prog.setpoint.duplicate()
             new_setpoint.cooling_schedule = no_cool_sched
@@ -175,13 +183,9 @@ def build_idf(room: dict, constructions: dict, building_program: str,
 
         r.properties.energy.program_type = prog
         r.properties.energy.construction_set = _construction_set_from_epsm(constructions)
-        # Create a fresh IdealAirSystem (not the shared library object, which is locked)
-        # and set NoLimit so EnergyPlus never tries to autosize capacities at runtime.
-        # Autosize + sizing disabled causes a SIGSEGV in EP 24.2 on Linux.
-        # cooling_limit = no_limit requires economizer_type = 'NoEconomizer'.
-        from honeybee_energy.hvac.idealair import IdealAirSystem
-        from honeybee.altnumber import no_limit
-        ideal_air = IdealAirSystem(f'Zone_{floor_idx + 1}_IdealAir')
+        # A fresh ideal air system with no capacity limits, so EnergyPlus never
+        # autosizes (autosize with sizing disabled crashes EP 24.2 on Linux).
+        ideal_air = IdealAirSystem(f'{name}_IdealAir')
         ideal_air.economizer_type = 'NoEconomizer'
         ideal_air.heating_limit = no_limit
         ideal_air.cooling_limit = no_limit
@@ -213,13 +217,17 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     sim.simulation_control.do_plant_sizing = False
     sim.simulation_control.run_for_sizing_periods = False
     sim.simulation_control.run_for_run_periods = True
+    # Exterior shading only, without reflections: much cheaper, and context
+    # buildings still cast shadows (HB Shadow Calculation: FullExterior).
+    sim.shadow_calculation.solar_distribution = 'FullExterior'
+    # Only the summary table we parse, and no SQLite output (HB Simulation Output).
+    # SQLite also segfaults EnergyPlus 24.2 on macOS ARM64.
+    sim.output.summary_reports = ['AnnualBuildingUtilityPerformanceSummary']
+    sim.output.include_sqlite = False
     sim_idf = sim.to_idf()
     # Align Version with the installed EnergyPlus binary (OpenStudio 3.9 ships 24.2).
     # honeybee-energy writes 23.2 by default; update to avoid version mismatch.
     sim_idf = re.sub(r'(Version,\s*)[\d\.]+', r'\g<1>24.2', sim_idf)
-    # Strip Output:SQLite — it causes a segfault in EnergyPlus 24.2 on macOS ARM64
-    # and is not needed since we parse results from the HTML summary table.
-    sim_idf = re.sub(r'\nOutput:SQLite,\s*\n[^\n]+;\s*', '\n', sim_idf)
     # Remove the hardcoded 2017 year from RunPeriod so EnergyPlus uses the EPW calendar.
     # A mismatched year causes EnergyPlus to skip all environment periods silently.
     sim_idf = re.sub(r' 2017,(\s+!- (?:start|end) year)', r' ,\1', sim_idf)
@@ -260,4 +268,5 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     )
     idf_text = sim_idf + _extra + '\n' + model_to_idf(model)
     floor_area = footprint_area(room['footprint_coordinates']) * floors
-    return idf_text, floor_area
+    multipliers = {r.identifier.upper(): r.multiplier for r in all_rooms}
+    return idf_text, floor_area, multipliers

@@ -23,14 +23,14 @@ def run_energy(
     Each call uses its own folder, so any number can run at the same time.
     """
     os.makedirs(workdir, exist_ok=True)
-    idf_text, floor_area = build_idf(
+    idf_text, floor_area, multipliers = build_idf(
         room, constructions, building_program, natural_ventilation, context_buildings,
     )
     idf_path = os.path.join(workdir, 'energy.idf')
     with open(idf_path, 'w', encoding='utf-8') as stream:
         stream.write(idf_text)
 
-    raw = run_local_eplus(idf_path, epw_path, os.path.join(workdir, 'eplus'))
+    raw = run_local_eplus(idf_path, epw_path, os.path.join(workdir, 'eplus'), multipliers)
     area = max(float(floor_area), 1e-9)
     heating = float(raw.get('heating_energy_kwh') or 0)
     cooling = float(raw.get('cooling_energy_kwh') or 0)

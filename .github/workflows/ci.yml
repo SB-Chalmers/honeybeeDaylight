@@ -23,21 +23,53 @@ jobs:
       - name: EnergyPlus smoke run
         run: |
           docker run --rm -i simulation-service python - <<'EOF'
-          import tempfile
+          import tempfile, time
           from simulation.energy.simulate import run_energy
 
           layer = {'material_name': 'Concrete', 'thickness_m': 0.2, 'conductivity_w_mk': 1.1,
                    'density_kg_m3': 2000, 'specific_heat_j_kgk': 900}
           constructions = {kind: {'name': f'{kind}_c', 'u_value_w_m2k': 1.4, 'layers': [layer]}
                            for kind in ('wall', 'floor', 'roof', 'window')}
-          room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': 2,
+          # 6 floors: the 4 middle floors run as one zone with multiplier 4.
+          room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': 6,
                   'floor_to_floor_height': 3.2, 'wwr': 0.4}
           with tempfile.TemporaryDirectory() as folder:
+              start = time.time()
               result = run_energy(room, [], constructions, 'Office', False,
                                   'weather/gothenburg_tmyx.epw', folder)
+          print(f'energy run: {time.time() - start:.1f} s')
           print({k: v for k, v in result.items() if not isinstance(v, (list, dict))})
-          assert result['heating_energy_kwh'] > 0, 'no heating energy'
-          assert result['monthly_heat_balance'], 'no monthly balance'
-          assert len(result['heating_hourly_kwh'] or []) == 8760, 'hourly heating missing'
-          assert sum(result['heating_hourly_kwh']) > 0, 'hourly heating is all zero'
+          annual = result['heating_energy_kwh']
+          hourly = sum(result['heating_hourly_kwh'] or [])
+          monthly = sum(result['monthly_heat_balance']['heating']) * result['floor_area_m2']
+          print(f'heating kWh: annual {annual:.0f}, hourly sum {hourly:.0f}, monthly sum {monthly:.0f}')
+          assert annual > 0, 'no heating energy'
+          assert len(result['heating_hourly_kwh']) == 8760, 'hourly heating missing'
+          # Zone outputs are per single zone; these only agree if the multiplier is applied.
+          assert abs(hourly - annual) < 0.05 * annual, 'hourly heating does not add up to annual'
+          assert abs(monthly - annual) < 0.05 * annual, 'monthly heating does not add up to annual'
           EOF
+
+      - name: Compare with the previous energy model (temporary)
+        run: |
+          git fetch --depth 1 origin d61f6ec
+          git worktree add /tmp/old FETCH_HEAD
+          cat > /tmp/compare.py <<'EOF'
+          import tempfile, time
+          from simulation.energy.simulate import run_energy
+          layer = {'material_name': 'Concrete', 'thickness_m': 0.2, 'conductivity_w_mk': 1.1,
+                   'density_kg_m3': 2000, 'specific_heat_j_kgk': 900}
+          constructions = {kind: {'name': f'{kind}_c', 'u_value_w_m2k': 1.4, 'layers': [layer]}
+                           for kind in ('wall', 'floor', 'roof', 'window')}
+          for floors in (1, 3, 6, 10):
+              room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': floors,
+                      'floor_to_floor_height': 3.2, 'wwr': 0.4}
+              with tempfile.TemporaryDirectory() as folder:
+                  start = time.time()
+                  r = run_energy(room, [], constructions, 'Office', False, 'weather/gothenburg_tmyx.epw', folder)
+              print(f"floors={floors:2d}  {time.time() - start:5.1f} s  heating {r['heating_demand_kwh_m2']:6.1f}  cooling {r['cooling_demand_kwh_m2']:6.1f} kWh/m2")
+          EOF
+          echo "== before (d61f6ec) =="
+          docker run --rm -v /tmp/old/simulation:/app/simulation -v /tmp/compare.py:/c.py simulation-service python /c.py
+          echo "== after =="
+          docker run --rm -v /tmp/compare.py:/c.py simulation-service python /c.py

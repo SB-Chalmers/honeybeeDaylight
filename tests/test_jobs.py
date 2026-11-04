@@ -50,7 +50,7 @@ def test_bad_room_and_bad_epw_are_client_errors():
 
 @pytest.mark.parametrize('program', list(idf_builder.PROGRAMS))
 def test_idf_builds_for_every_program(program):
-    idf, area = idf_builder.build_idf(ROOM, CONSTRUCTIONS, program, False, [])
+    idf, area, _ = idf_builder.build_idf(ROOM, CONSTRUCTIONS, program, False, [])
     assert area == pytest.approx(32.0)
     assert 'Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly' in idf
 
@@ -58,7 +58,7 @@ def test_idf_builds_for_every_program(program):
 def test_energy_job_with_fake_energyplus(monkeypatch):
     monkeypatch.setattr(jobs, 'fetch_constructions', lambda names: CONSTRUCTIONS)
 
-    def fake_eplus(idf_path, epw_path, sim_dir):
+    def fake_eplus(idf_path, epw_path, sim_dir, multipliers):
         return {'heating_energy_kwh': 3200.0, 'cooling_energy_kwh': 320.0,
                 'total_energy_kwh': 6400.0, 'monthly_heat_balance': None,
                 'heating_hourly_kwh': [1.0] * 8760, 'cooling_hourly_kwh': [0.0] * 8760}
@@ -95,6 +95,9 @@ def test_hourly_loads_sum_zones_and_skip_monthly_rows(tmp_path):
     loads = local_runner.parse_hourly_loads(path)
     assert loads['heating_hourly_kwh'] == [3.0, 1.0]
     assert loads['cooling_hourly_kwh'] == [0.0, 0.5]
+    # Zone outputs are per single zone: scale by the zone multiplier.
+    scaled = local_runner.parse_hourly_loads(path, {'ZONE_2_IDEALAIR': 3})
+    assert scaled['heating_hourly_kwh'] == [7.0, 3.0]
 
 
 def test_hourly_loads_from_eso_keep_last_environment(tmp_path):
