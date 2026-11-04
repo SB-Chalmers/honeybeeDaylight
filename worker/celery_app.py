@@ -31,7 +31,7 @@ app.conf.update(
     result_serializer='json',
     accept_content=['json'],
     result_compression='gzip',
-    result_expires=int(os.environ.get('RESULT_TTL_SECONDS', '3600')),
+    result_expires=int(os.environ.get('RESULT_TTL_SECONDS', '600')),
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     task_track_started=True,

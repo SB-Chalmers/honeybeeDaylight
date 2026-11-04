@@ -8,7 +8,7 @@ Storing results is the client application's job.
 ```
 client ──HTTPS──▶ api (FastAPI) ──▶ Redis queue ──▶ daylight worker (Foton, GPU, 1 job at a time)
                      ▲                         └──▶ energy worker  (EnergyPlus, CPU, 1 job per core)
-                     └──────── result (kept in Redis for 1 h, then gone)
+                     └──────── result (kept in Redis for 10 min, then gone)
 ```
 
 Celery spreads the work: workers pull a job when they are free, so a burst of
@@ -105,7 +105,7 @@ If `APP_KEYS` is empty, signing is off (local development only).
 
 Settings live in `.env` (see `.env.example`). The ones you may want to change:
 `APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` (default: CPU cores),
-`RESULT_TTL_SECONDS` (default 3600), `FOTON_BACKEND`.
+`RESULT_TTL_SECONDS` (default 600), `FOTON_BACKEND`.
 
 ## Deployment
 

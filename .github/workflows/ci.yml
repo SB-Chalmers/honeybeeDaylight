@@ -17,7 +17,7 @@ jobs:
 
       - name: Unit and API tests
         run: |
-          docker run --rm -e FOTON_BACKEND=reference -v "$PWD/tests:/app/tests" -v "$PWD/study_info.json:/app/study_info.json" \
+          docker run --rm -e FOTON_BACKEND=reference -v "$PWD/tests:/app/tests" \
             simulation-service sh -c "pip install -q pytest && pytest -q tests"
 
       - name: EnergyPlus smoke run

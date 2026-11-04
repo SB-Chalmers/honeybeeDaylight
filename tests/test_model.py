@@ -5,12 +5,11 @@ Covers: room geometry from footprint, orientation, floor elevation,
         per-cardinal WWR assignment, shading, sensor grid dimensions.
 """
 
-import math
 
 import pytest
 
 from simulation.inputs import load_room_inputs
-from simulation.model import build_model, export_model
+from simulation.model import build_model
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -227,24 +226,6 @@ class TestSharedWalls:
         wall = self.walls(3)[1]
         assert str(wall.boundary_condition) == 'Outdoors'
         assert len(wall.apertures) > 0
-
-
-# ── Export ────────────────────────────────────────────────────────────────────
-
-class TestExportModel:
-    def test_writes_hbjson(self, tmp_path):
-        model, _ = build_model(cfg())
-        path = export_model(model, str(tmp_path))
-        assert path.endswith('model.hbjson')
-        assert (tmp_path / 'model.hbjson').exists()
-
-    def test_exported_json_is_valid(self, tmp_path):
-        import json
-        model, _ = build_model(cfg())
-        path = export_model(model, str(tmp_path))
-        with open(path) as f:
-            data = json.load(f)
-        assert data.get('type') == 'Model'
 
 
 def test_shared_walls_follow_each_floor_in_all_floor_mode():

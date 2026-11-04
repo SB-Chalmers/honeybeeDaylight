@@ -1,13 +1,10 @@
 """
 Tests for simulation.inputs
 ────────────────────────────
-Covers: load_room_inputs (dict, JSON string, file), wwr fan-out,
+Covers: load_room_inputs (defaults), wwr fan-out,
         deep merge, validate_room_inputs error cases.
 """
 
-import json
-import os
-import tempfile
 
 import pytest
 
@@ -56,36 +53,6 @@ class TestLoadFromDict:
         inp = {'floor_to_floor_height': 5.0}
         load_room_inputs(inp)
         assert inp == {'floor_to_floor_height': 5.0}
-
-
-class TestLoadFromJsonString:
-    def test_reads_room_inputs_key(self):
-        payload = json.dumps({'room_inputs': MINIMAL})
-        cfg = load_room_inputs(payload)
-        assert cfg['floor_to_floor_height'] == MINIMAL['floor_to_floor_height']
-
-    def test_falls_back_to_root_when_no_key(self):
-        cfg = load_room_inputs(json.dumps(MINIMAL))
-        assert cfg['selected_floor_number'] == 1
-
-    def test_uses_defaults_when_key_missing(self, capsys):
-        payload = json.dumps({'some_other_key': 1})
-        cfg = load_room_inputs(payload)
-        captured = capsys.readouterr()
-        assert 'defaults' in captured.out.lower()
-        assert cfg['floor_to_floor_height'] == DEFAULT_ROOM_INPUTS['floor_to_floor_height']
-
-
-class TestLoadFromFile:
-    def test_reads_room_inputs_key_from_file(self, tmp_path):
-        p = tmp_path / 'study_info.json'
-        p.write_text(json.dumps({'room_inputs': MINIMAL}))
-        cfg = load_room_inputs(str(p))
-        assert cfg['wall_thickness'] == MINIMAL['wall_thickness']
-
-    def test_missing_file_returns_defaults(self, capsys):
-        cfg = load_room_inputs('/nonexistent/path/study_info.json')
-        assert cfg == DEFAULT_ROOM_INPUTS
 
 
 class TestWwrFanout:

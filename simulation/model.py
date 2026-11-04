@@ -8,9 +8,7 @@ Public API
 build_model(cfg) -> (Model, SensorGrid)
 """
 
-import json
 import math
-import os
 
 from honeybee.model import Model
 from honeybee.room import Room
@@ -183,12 +181,3 @@ def build_model(cfg: dict, context_buildings: list[dict] | None = None):
     for grid in grids:
         model.properties.radiance.add_sensor_grid(grid)
     return model, SensorGridCollection(grids) if all_floors else grids[0]
-
-
-def export_model(model: Model, folder: str) -> str:
-    """Write model HBJSON to folder and return the file path."""
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, 'model.hbjson')
-    with open(path, 'w') as f:
-        json.dump(model.to_dict(), f)
-    return path
