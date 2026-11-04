@@ -145,7 +145,8 @@ FOTON_BACKEND=reference pytest tests/
 ```
 
 To run the stack without Docker: start `redis-server`, then
-`celery -A worker.celery_app worker -Q daylight,energy` and
+`celery -A worker.celery_app worker -Q daylight,energy` (on macOS add
+`--pool threads`, because the default pool fails there) and
 `uvicorn api.main:app --reload`. Energy needs EnergyPlus 24.2 on `PATH`
 (or `EPLUS_BINARY=/path/to/energyplus`).
 
