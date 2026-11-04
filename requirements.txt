@@ -18,4 +18,4 @@ foton-daylight[honeybee]==0.3.3
 numpy==2.1.0
 
 # EnergyPlus HTML summary parsing
-beautifulsoup4>=4.12
+beautifulsoup4==4.15.0

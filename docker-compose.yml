@@ -5,6 +5,8 @@
 #
 # Daylight runs on the GPU queue (one job at a time per GPU).
 # Energy runs on the CPU queue (ENERGY_CONCURRENCY EnergyPlus runs at once).
+# Worker processes are replaced after 200 jobs (--max-tasks-per-child), so a
+# slow memory leak cannot build up during a long class.
 
 x-app: &app
   build: .
@@ -12,14 +14,18 @@ x-app: &app
   env_file: .env
   restart: unless-stopped
   depends_on: [redis]
+  # Docker keeps container logs forever by default; cap them at 3 x 10 MB.
+  logging: &logging
+    options: {max-size: 10m, max-file: "3"}
 
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     # Queue + short-lived results only: no persistence. When memory is full,
     # expire results first and never drop queued jobs.
     command: redis-server --save "" --appendonly no --maxmemory 512mb --maxmemory-policy volatile-ttl
     restart: unless-stopped
+    logging: *logging
 
   api:
     <<: *app
@@ -33,7 +39,7 @@ services:
 
   daylight:
     <<: *app
-    command: celery -A worker.celery_app worker -Q daylight --concurrency 1 --loglevel INFO
+    command: celery -A worker.celery_app worker -Q daylight --concurrency 1 --max-tasks-per-child 200 --loglevel INFO
     environment:
       NVIDIA_DRIVER_CAPABILITIES: all   # 'graphics' is needed for Vulkan
     # Needs the NVIDIA Container Toolkit on the host. Remove this block on a
@@ -48,4 +54,4 @@ services:
 
   energy:
     <<: *app
-    command: sh -c 'exec celery -A worker.celery_app worker -Q energy --concurrency "$${ENERGY_CONCURRENCY:-$$(nproc)}" --loglevel INFO'
+    command: sh -c 'exec celery -A worker.celery_app worker -Q energy --concurrency "$${ENERGY_CONCURRENCY:-$$(nproc)}" --max-tasks-per-child 200 --loglevel INFO'

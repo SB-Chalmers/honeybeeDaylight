@@ -5,7 +5,7 @@ FROM nrel/energyplus:24.2.0 AS eplus
 WORKDIR /EnergyPlus-24.2.0-94a887817b-Linux-Ubuntu22.04-x86_64
 RUN rm -rf ExampleFiles WeatherData Documentation DataSets MacroDataSets
 
-FROM python:3.13-slim
+FROM python:3.13.18-slim
 
 # libvulkan1 lets Foton find a GPU. libgomp1 and libx11-6 are needed by EnergyPlus.
 RUN apt-get update \

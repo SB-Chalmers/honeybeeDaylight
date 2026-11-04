@@ -15,6 +15,7 @@ set -euo pipefail
 ALERT_EMAILS="${ALERT_EMAILS:-root}"   # comma-separated superusers
 LIMIT="${LIMIT:-90}"                   # alert at or above this percent
 DISK_PATH="${DISK_PATH:-/}"
+QUEUE_LIMIT="${QUEUE_LIMIT:-40}"       # alert when more jobs than this are waiting
 
 alert() {
     echo "$1" | mail -s "[simulation-service] $(hostname): $2" "$ALERT_EMAILS"
@@ -37,7 +38,18 @@ case "${1:-}" in
     cpu=$(awk -v cores="$(nproc)" '{printf "%d", $1 * 100 / cores}' /proc/loadavg)
     gpu=$(nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null \
           | awk -F', ' '{u = $1; m = $2 * 100 / $3; v = (u > m ? u : m); if (v > max) max = v} END {printf "%d", max}')
-    report="disk ${disk}%  memory ${mem}%  cpu(load) ${cpu}%  gpu ${gpu:-n/a}%"
+    # Jobs waiting in the Celery queues. A long queue means students are
+    # waiting, which matters more than a busy CPU (busy is normal in class).
+    redis=$(docker ps -qf label=com.docker.compose.service=redis | head -1)
+    queued=0
+    for queue in daylight energy; do
+        n=$(docker exec "$redis" redis-cli llen "$queue" 2>/dev/null || echo 0)
+        queued=$((queued + n))
+    done
+    report="disk ${disk}%  memory ${mem}%  cpu(load) ${cpu}%  gpu ${gpu:-n/a}%  queued jobs ${queued}"
+    if [ "$queued" -gt "$QUEUE_LIMIT" ]; then
+        alert "$report" "$queued jobs waiting"
+    fi
     for pair in "disk:$disk" "memory:$mem" "cpu:$cpu" "gpu:${gpu:-0}"; do
         if [ "${pair#*:}" -ge "$LIMIT" ]; then
             alert "$report" "${pair%%:*} at ${pair#*:}%"

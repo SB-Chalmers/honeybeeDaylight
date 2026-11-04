@@ -131,7 +131,8 @@ from forks never reaches the machine.
 ## Workstation upkeep
 
 `ops/maintenance.sh` installs OS updates nightly (and reboots if needed) and
-emails the superusers when disk, memory, CPU or GPU reach 90 %. Setup
+emails the superusers when disk, memory, CPU or GPU reach 90 %, or when more
+than 40 jobs are waiting in the queues (`QUEUE_LIMIT`). Setup
 instructions are at the top of the script. The containers come back after a
 reboot by themselves (`restart: unless-stopped`) as long as Docker is enabled
 (`sudo systemctl enable docker`).
