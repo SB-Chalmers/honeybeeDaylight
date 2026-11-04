@@ -1,0 +1,43 @@
+# Build the image, run the tests inside it, and run one real EnergyPlus simulation.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t simulation-service .
+
+      - name: Unit and API tests
+        run: |
+          docker run --rm -e FOTON_BACKEND=reference -v "$PWD/tests:/app/tests" -v "$PWD/study_info.json:/app/study_info.json" \
+            simulation-service sh -c "pip install -q pytest && pytest -q tests"
+
+      - name: EnergyPlus smoke run
+        run: |
+          docker run --rm -i simulation-service python - <<'EOF'
+          import tempfile
+          from simulation.energy.simulate import run_energy
+
+          layer = {'material_name': 'Concrete', 'thickness_m': 0.2, 'conductivity_w_mk': 1.1,
+                   'density_kg_m3': 2000, 'specific_heat_j_kgk': 900}
+          constructions = {kind: {'name': f'{kind}_c', 'u_value_w_m2k': 1.4, 'layers': [layer]}
+                           for kind in ('wall', 'floor', 'roof', 'window')}
+          room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': 2,
+                  'floor_to_floor_height': 3.2, 'wwr': 0.4}
+          with tempfile.TemporaryDirectory() as folder:
+              result = run_energy(room, [], constructions, 'Office', False,
+                                  'weather/gothenburg_tmyx.epw', folder)
+          print({k: v for k, v in result.items() if not isinstance(v, (list, dict))})
+          assert result['heating_energy_kwh'] > 0, 'no heating energy'
+          assert result['monthly_heat_balance'], 'no monthly balance'
+          assert len(result['heating_hourly_kwh'] or []) == 8760, 'hourly heating missing'
+          assert sum(result['heating_hourly_kwh']) > 0, 'hourly heating is all zero'
+          EOF
