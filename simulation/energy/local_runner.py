@@ -51,7 +51,7 @@ def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str) -> dict:
         err_tail = err_file.read_text(errors='replace')[-3000:] if err_file.exists() else '(no error file)'
         raise RuntimeError(
             f'EnergyPlus produced no HTML results table (exit={proc.returncode}). '
-            f'Last errors:\n{err_tail}'
+            f'Last errors:\n{err_tail}\nstderr:\n{proc.stderr[-2000:]}'
         )
 
     result = _parse_htm(htm)
