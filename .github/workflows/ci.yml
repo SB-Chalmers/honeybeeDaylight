@@ -1,4 +1,5 @@
-# Build the image, run the tests inside it, and run one real EnergyPlus simulation.
+# Build the image, run the tests inside it, run one real EnergyPlus simulation,
+# then start the whole stack with docker compose exactly as on the workstation.
 name: CI
 
 on:
@@ -50,3 +51,18 @@ jobs:
           assert abs(monthly - annual) < 0.05 * annual, 'monthly heating does not add up to annual'
           EOF
 
+      - name: Docker compose stack answers a signed request
+        run: |
+          # The same commands as the README, with a CI secret and no GPU:
+          # the override drops the NVIDIA reservation and Foton runs on the CPU.
+          cp .env.example .env
+          sed -i 's/^APP_KEYS=.*/APP_KEYS=ci:ci-secret/; s/^FOTON_BACKEND=.*/FOTON_BACKEND=reference/' .env
+          printf 'services:\n  daylight:\n    deploy: !reset {}\n' > ci.override.yml
+          docker compose -f docker-compose.yml -f ci.override.yml up -d --wait
+          docker compose ps
+          docker compose -f docker-compose.yml -f ci.override.yml run --rm -v "$PWD/scripts:/scripts" api \
+            python /scripts/client.py --url http://api:8000 --app ci --secret ci-secret --path /v1/daylight
+
+      - name: Logs if the stack failed
+        if: failure()
+        run: docker compose logs --tail 100

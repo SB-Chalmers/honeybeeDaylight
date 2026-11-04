@@ -72,8 +72,7 @@ def main():
     print(response.status_code, f'{len(response.content)} bytes')
     data = response.json()
     if response.status_code != 200:
-        print(data)
-        return
+        raise SystemExit(f'request failed: {data}')
     daylight = data.get('daylight', data if 'df' in data else None)
     energy = data.get('energy', data if 'total_energy_kwh' in data else None)
     if daylight:
