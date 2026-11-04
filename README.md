@@ -107,6 +107,27 @@ Settings live in `.env` (see `.env.example`). The ones you may want to change:
 `APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` (default: CPU cores),
 `RESULT_TTL_SECONDS` (default 3600), `FOTON_BACKEND`.
 
+## Deployment
+
+Every push to `main` deploys to the workstation through a GitHub Actions
+self-hosted runner (`.github/workflows/deploy.yml`). The runner connects out to
+GitHub, so it works behind the Chalmers firewall with no static IP or SSH.
+
+One-time setup on the workstation, by someone with access:
+
+1. Put the settings in place: `sudo mkdir -p /opt/simulation-service`, copy
+   `.env.example` to `/opt/simulation-service/.env`, fill in `APP_KEYS`, and make
+   it readable by the runner's user.
+2. On GitHub, open **Settings → Actions → Runners → New self-hosted runner**
+   (Linux x64) and run the download and `./config.sh` commands it shows, adding
+   `--labels simulation` to `config.sh`. Use a user in the `docker` group.
+3. Install it as a service so it survives reboots:
+   `sudo ./svc.sh install && sudo ./svc.sh start`.
+4. Test it: **Actions → Deploy → Run workflow**.
+
+The workflow only runs on pushes to `main` (never on pull requests), so code
+from forks never reaches the machine.
+
 ## Workstation upkeep
 
 `ops/maintenance.sh` installs OS updates nightly (and reboots if needed) and
