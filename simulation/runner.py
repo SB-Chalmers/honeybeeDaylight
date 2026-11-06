@@ -11,6 +11,7 @@ import os
 import re
 
 import numpy as np
+from foton import Engine
 from foton.honeybee import HoneybeeStudy
 
 
@@ -20,6 +21,19 @@ QUALITIES = ('preview', 'final')
 def _backend() -> str:
     """Return the requested Foton backend (auto-select by default)."""
     return os.environ.get('FOTON_BACKEND', 'auto').strip().lower() or 'auto'
+
+
+# One engine kept for the life of the worker process. Without it, every study
+# loads and unloads the NVIDIA Vulkan driver, and after about 12 jobs glibc runs
+# out of static TLS for libnvidia-tls and every later job fails with "Unable to
+# find a Vulkan driver".
+_DRIVER_ANCHOR = None
+
+
+def _keep_driver_loaded(backend: str) -> None:
+    global _DRIVER_ANCHOR
+    if _DRIVER_ANCHOR is None and backend != 'reference':
+        _DRIVER_ANCHOR = Engine({'backend': backend})
 
 
 def _floor_number(room_identifier: str) -> int | None:
@@ -47,7 +61,9 @@ def run_daylight(
     if quality not in QUALITIES:
         raise ValueError(f'quality must be one of {QUALITIES}.')
 
-    study = HoneybeeStudy(model, backend=_backend(), weather_memo=weather_memo)
+    backend = _backend()
+    _keep_driver_loaded(backend)
+    study = HoneybeeStudy(model, backend=backend, weather_memo=weather_memo)
     positions = np.asarray(study.prepared.arrays['sensor_positions'], dtype=np.float32)
 
     df_run = study.daylight_factor(quality=quality)
