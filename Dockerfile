@@ -7,9 +7,11 @@ RUN rm -rf ExampleFiles WeatherData Documentation DataSets MacroDataSets
 
 FROM python:3.13.18-slim
 
-# libvulkan1 lets Foton find a GPU. libgomp1 and libx11-6 are needed by EnergyPlus.
+# libvulkan1 lets Foton find a GPU, and libxext6 lets it load the NVIDIA Vulkan
+# driver (libGLX_nvidia) that the container toolkit mounts. libgomp1 and
+# libx11-6 are needed by EnergyPlus.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libvulkan1 libgomp1 libx11-6 \
+    && apt-get install -y --no-install-recommends libvulkan1 libgomp1 libx11-6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=eplus /EnergyPlus-24.2.0-94a887817b-Linux-Ubuntu22.04-x86_64 /opt/energyplus
