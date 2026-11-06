@@ -24,7 +24,7 @@ curl http://localhost:8000/health   # {"status":"ok"}
 ```
 
 The GPU worker needs the NVIDIA driver and the
-[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+NVIDIA Container Toolkit (see [Deployment](#deployment))
 on the host. Without a GPU, delete the `deploy:` block of the `daylight`
 service and Foton runs on the CPU (much slower).
 
@@ -114,15 +114,54 @@ Settings live in `.env` (see `.env.example`). The ones you may want to change:
 
 ## Deployment
 
-On the workstation (Ubuntu with Docker, the NVIDIA driver and the NVIDIA
-Container Toolkit installed):
+On an Ubuntu workstation with an NVIDIA GPU and Docker. Steps 1 and 2 are
+once per machine.
 
-```bash
-sudo systemctl enable docker            # containers come back after a reboot
-git clone https://github.com/SB-Chalmers/honeybeeDaylight.git && cd honeybeeDaylight
-cp .env.example .env                    # set APP_KEYS
-docker compose up -d --build
-```
+1. **Check the driver.** `nvidia-smi` should list the GPU.
+
+2. **Install the NVIDIA Container Toolkit** (needs sudo):
+
+   ```bash
+   curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+   curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker && sudo systemctl enable docker
+   ```
+
+   The restart stops every container on the machine for a few seconds, not
+   only this one. `docker run --rm --gpus all ubuntu nvidia-smi -L` should
+   then list the GPU.
+
+3. **Clone and configure:**
+
+   ```bash
+   git clone https://github.com/SB-Chalmers/honeybeeDaylight.git && cd honeybeeDaylight
+   cp .env.example .env && chmod 600 .env
+   ```
+
+   In `.env`, set:
+   - `APP_KEYS`: one key per client app (see [API keys](#api-keys)).
+   - `FOTON_BACKEND=vulkan`, so daylight fails loudly if the GPU is missing
+     instead of falling back to the CPU (minutes per job instead of seconds).
+   - `ENERGY_CONCURRENCY`: physical cores minus two (for example 6 on an
+     8-core, 16-thread CPU). EnergyPlus is single-threaded and the default
+     (every thread) oversubscribes the CPU.
+
+4. **Start it:** `docker compose up -d --build --wait`
+
+5. **Check that Foton sees the GPU inside the container:**
+
+   ```bash
+   docker compose exec daylight python -c "from foton import Engine; Engine({'backend': 'vulkan'}); print('vulkan ok')"
+   ```
+
+   If it says `Unable to find a Vulkan driver`, run it again with
+   `-e VK_LOADER_DEBUG=error` after `exec` to see which library is missing.
+
+6. **Send a request with a key:**
+   `python scripts/client.py --url http://<host>:8000 --key <key> --path /v1/daylight`.
+   Without a key the API answers 401.
 
 To update: `git pull && docker compose up -d --build`. To roll back:
 `git checkout <commit> && docker compose up -d --build`.
