@@ -155,7 +155,7 @@ class DaylightOptions(BaseModel):
     run_sda: bool = Field(False, description='Also run annual daylight and return DA / sDA.')
     da_lux: int = Field(300, gt=0)
     sda_target_pct: float = Field(50.0, ge=0, le=100)
-    quality: Literal['preview', 'final'] = 'final'
+    quality: Literal['preview', 'final'] = 'preview'
 
 
 class ConstructionNames(BaseModel):
