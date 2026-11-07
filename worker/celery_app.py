@@ -20,7 +20,10 @@ Start a worker:
 from __future__ import annotations
 
 import os
+import socket
+import time
 
+from billiard.process import current_process
 from celery import Celery
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -49,11 +52,16 @@ def _run(job, request: dict) -> dict:
     """Run a job; turn a client mistake into a result the API answers with 400."""
     from .jobs import BadInput
 
+    started_at = time.time()
     try:
-        return job(request)
+        result = job(request)
     except BadInput as exc:
         # Returned, not raised: a client error is a normal outcome for the API.
         return {'error': 'bad_input', 'message': str(exc)}
+    # Which worker slot ran the job and when it started: lets the stress test
+    # replay how jobs queued and spread over the workers.
+    slot = getattr(current_process(), 'index', 0)
+    return {**result, 'worker': f'{socket.gethostname()}:{slot}', 'started_at': round(started_at, 3)}
 
 
 @app.task(name='simulation.daylight')

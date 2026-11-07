@@ -247,6 +247,8 @@ class DaylightResult(BaseModel):
     """Response of POST /v1/daylight."""
     weather: str
     seconds: float
+    worker: Optional[str] = Field(None, description='Worker slot that ran the job (host:slot).')
+    started_at: Optional[float] = Field(None, description='Unix time the worker started the job.')
     sensor_count: int
     sensor_grids: list[SensorGridInfo] = Field(
         description='One slice per floor into the flat sensor arrays.'
@@ -264,6 +266,8 @@ class EnergyResult(BaseModel):
     """Response of POST /v1/energy (kWh, and kWh/m2 of floor area)."""
     weather: str
     seconds: float
+    worker: Optional[str] = Field(None, description='Worker slot that ran the job (host:slot).')
+    started_at: Optional[float] = Field(None, description='Unix time the worker started the job.')
     floor_area_m2: float
     heating_energy_kwh: float
     cooling_energy_kwh: float
