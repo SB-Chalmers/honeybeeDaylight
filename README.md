@@ -49,6 +49,9 @@ Full schemas are at `/docs`. A minimal request:
 }
 ```
 
+- **Daylight quality.** `preview` by default (about 0.6 s per job on the
+  workstation GPU, twice the throughput). Send `"daylight": {"quality": "final"}`
+  for the full sample budget (about 1.2 s).
 - **Weather.** `gothenburg_tmyx.epw` unless the request includes `"epw": "<EPW file text>"`.
 - **Floors.** Every floor gets a room and a sensor grid. `sensor_grids` gives
   each floor's `start_sensor_index` and `sensor_count` in the flat arrays.

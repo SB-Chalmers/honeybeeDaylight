@@ -81,7 +81,7 @@ def daylight_job(request: dict) -> dict:
             run_sda=opts.get('run_sda', False),
             da_lux=da_lux,
             sda_target_pct=target,
-            quality=opts.get('quality', 'final'),
+            quality=opts.get('quality', 'preview'),
             weather_memo=_DEFAULT_WEATHER_MEMO if weather.startswith('default') else None,
         )
     df, da = result['df'], result['da']
