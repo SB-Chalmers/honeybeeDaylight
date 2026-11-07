@@ -35,3 +35,4 @@ data/
 # Local secrets (APP_KEYS etc.)
 .env
 dump.rdb
+report.html

@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Template for scripts/stress_test.py: {{NAME}} placeholders are filled in by the script. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stress test report</title>
+<style>
+:root { --bg:#fcfcfb; --ink:#0b0b0b; --muted:#52514e; --grid:#e4e3df; --card:#f4f3f0;
+        --daylight:#2a78d6; --energy:#eb6834; --ok:#8a8984; --err:#d03b3b; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#1a1a19; --ink:#f0efec; --muted:#c3c2b7; --grid:#383835; --card:#242423;
+          --daylight:#3987e5; --energy:#d95926; --ok:#8a8984; --err:#e66767; }
+}
+body { margin:0 auto; max-width:800px; padding:24px 16px; background:var(--bg); color:var(--ink);
+       font:15px/1.5 system-ui, sans-serif; }
+h1 { font-size:22px; margin:0 } h2 { font-size:16px; margin:28px 0 2px } .muted { color:var(--muted) }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:8px; margin-top:16px }
+.tile { background:var(--card); border-radius:8px; padding:10px 12px } .tile b { display:block; font-size:22px }
+svg { width:100%; height:auto; margin-top:6px } svg text { fill:var(--muted); font-size:11px }
+.axis { stroke:var(--muted) } .grid { stroke:var(--grid) }
+.burst { stroke:var(--muted); stroke-dasharray:3 3 } .limit { stroke:var(--err); stroke-dasharray:6 4 }
+rect.daylight { fill:var(--daylight) } rect.energy { fill:var(--energy) }
+.line { fill:none; stroke-width:2 } .line.daylight { stroke:var(--daylight) } .line.energy { stroke:var(--energy) } .line.abandoned { stroke:var(--err); stroke-dasharray:6 3 }
+circle.ok { fill:var(--ok); stroke:var(--bg); stroke-width:1.5 } circle.err { fill:var(--err); stroke:var(--bg); stroke-width:1.5 }
+.key i { display:inline-block; width:10px; height:10px; border-radius:2px; margin:0 4px 0 12px }
+.key i.dash { height:0; border-top:2px dashed var(--muted); border-radius:0 }
+table { border-collapse:collapse; width:100% } td, th { text-align:left; padding:4px 8px; border-bottom:1px solid var(--grid); vertical-align:top }
+</style></head><body>
+<h1>Stress test report</h1>
+<div class="muted">{{SETTINGS}} · {{DATE}}</div>
+<div class="tiles">{{TILES}}</div>
+
+<h2>Worker slots</h2>
+<div class="muted key">What each worker ran, and when. Gaps are idle time. Hover a bar for the student and its wait.
+<br><i style="background:var(--daylight)"></i>daylight (GPU)<i style="background:var(--energy)"></i>energy (CPU)<i class="dash"></i>whole class clicked Run</div>
+{{TIMELINE}}
+
+<h2>Queues</h2>
+<div class="muted key">Jobs waiting for a free worker, and jobs students gave up on (they keep running on the server, invisible to the test).
+<br><i style="background:var(--daylight)"></i>daylight waiting<i style="background:var(--energy)"></i>energy waiting<i class="dash" style="border-color:var(--err)"></i>abandoned so far</div>
+{{QUEUES}}
+
+<h2>What students saw</h2>
+<div class="muted key">One dot per request: when it was sent and how long the student waited.
+<i style="background:var(--ok);border-radius:50%"></i>answered<i style="background:var(--err);border-radius:50%"></i>gave up or failed<i class="dash" style="border-color:var(--err)"></i>give-up limit</div>
+{{LATENCY}}
+
+<h2>Status codes</h2>
+<table><tr><th>Status</th><th>Count</th></tr>{{STATUSES}}</table>
+
+<h2>Failures</h2>
+<table><tr><th>Status</th><th>Message</th><th>Count</th><th>When</th></tr>{{ERRORS}}</table>
+</body></html>
