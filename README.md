@@ -109,7 +109,7 @@ To rotate one without downtime, add the new key under a second name
 | `docker compose exec daylight celery -A worker.celery_app inspect active` | Jobs running right now |
 | `docker compose down` | Stop everything |
 | `python scripts/client.py --key <k>` | Send one test request |
-| `python scripts/stress_test.py --key <k> --constructions c.json` | 20 students for 20 minutes (see the script for options) |
+| `python scripts/stress_test.py --key <k> --constructions c.json` | 20 students for 20 minutes, or `--burst 3` for the whole class at once; writes `report.html` (see the script for steps) |
 
 Settings live in `.env` (see `.env.example`). The ones you may want to change:
 `APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` / `DAYLIGHT_CONCURRENCY`
