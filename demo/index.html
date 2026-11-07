@@ -1,0 +1,153 @@
+<!doctype html>
+<!--
+  Foton daylight demo. One page, no libraries.
+
+  Change the room with the sliders; when a slider is released the page sends
+  the room to POST /v1/daylight (nginx adds the API key) and draws the
+  daylight factor of every sensor as a plan, north up.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foton daylight demo</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #1c1c1e; --muted: #6e6e73; --line: #d2d2d7; --accent: #0a84ff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111; --fg: #f2f2f7; --muted: #98989d; --line: #38383a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 520px; padding: 16px; font: 16px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  canvas { width: 100%; aspect-ratio: 1; display: block; border: 1px solid var(--line); border-radius: 12px; touch-action: pan-y; }
+  #stats { margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
+  #status { display: block; font-size: 13px; color: var(--muted); }
+  #stats b { font-size: 22px; }
+  #scale { height: 10px; border-radius: 5px; background: linear-gradient(90deg, #2b2d6e, #2a7fb8, #37b37e, #e7d33a, #fff6c8); }
+  #ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 10px 0; font-size: 15px; }
+  label output { font-variant-numeric: tabular-nums; color: var(--muted); }
+  input[type=range] { grid-column: 1 / -1; width: 100%; height: 32px; accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Foton daylight demo</h1>
+<p>Daylight factor on the work plane, simulated on the GPU each time you let go of a slider.</p>
+
+<canvas id="plan" width="600" height="600"></canvas>
+<div id="stats">Mean daylight factor <b id="mean">–</b><span id="status">Loading…</span></div>
+<div id="scale"></div>
+<div id="ticks"><span>0 %</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10+ %</span></div>
+
+<form id="room">
+  <label>Width <output></output><input name="width" type="range" min="3" max="20" step="0.5" value="8" data-unit=" m"></label>
+  <label>Depth <output></output><input name="depth" type="range" min="3" max="20" step="0.5" value="6" data-unit=" m"></label>
+  <label>Window-to-wall ratio <output></output><input name="wwr" type="range" min="0.1" max="0.9" step="0.05" value="0.4" data-unit=""></label>
+  <label>Rotation <output></output><input name="rotation" type="range" min="0" max="345" step="15" value="0" data-unit="°"></label>
+  <label>Building to the south <output></output><input name="neighbour" type="range" min="0" max="10" step="1" value="0" data-unit=" floors"></label>
+</form>
+
+<script>
+const form = document.getElementById('room');
+const canvas = document.getElementById('plan');
+const ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
+const STOPS = [[0x2b, 0x2d, 0x6e], [0x2a, 0x7f, 0xb8], [0x37, 0xb3, 0x7e], [0xe7, 0xd3, 0x3a], [0xff, 0xf6, 0xc8]];
+let latest = 0;  // number of the newest request, so a slow older answer is ignored
+
+/** Read the sliders and show their values next to the labels. */
+function readForm() {
+  const v = {};
+  for (const input of form.querySelectorAll('input')) {
+    v[input.name] = Number(input.value);
+    input.previousElementSibling.textContent = input.value + input.dataset.unit;
+  }
+  return v;
+}
+
+/** The /v1/daylight request: a one-storey room centred on the origin, plus an optional neighbour 8 m to the south. */
+function request(v) {
+  const w = v.width / 2, d = v.depth / 2;
+  const body = {
+    room: {
+      footprint_coordinates: [[-w, -d], [w, -d], [w, d], [-w, d]],
+      orientation_offset: v.rotation,
+      floors: 1,
+      wwr: v.wwr,
+    },
+    daylight: { quality: 'final' },  // full sample budget: smoother maps, about 1 s on the GPU
+  };
+  if (v.neighbour > 0) {
+    const y = -Math.hypot(w, d) - 8;  // clear of the room at any rotation
+    body.context_buildings = [{ footprint_coordinates: [[-15, y - 10], [15, y - 10], [15, y], [-15, y]], floors: v.neighbour }];
+  }
+  return body;
+}
+
+/** Decode a packed array ({dtype, scale, data}) into plain numbers. */
+function unpack(p) {
+  if (Array.isArray(p)) return p.flat();
+  const bytes = Uint8Array.from(atob(p.data), c => c.charCodeAt(0));
+  const raw = new ({ uint16: Uint16Array, float32: Float32Array })[p.dtype](bytes.buffer);
+  return Array.from(raw, x => x / p.scale);
+}
+
+/** Colour for a daylight factor (%), 0 to 10+ along the legend. */
+function colour(df) {
+  const t = Math.min(Math.max(df, 0), 10) / 10 * (STOPS.length - 1);
+  const i = Math.min(Math.floor(t), STOPS.length - 2), f = t - i;
+  const [a, b] = [STOPS[i], STOPS[i + 1]];
+  return `rgb(${a.map((c, k) => Math.round(c + (b[k] - c) * f))})`;
+}
+
+/** Draw every sensor as a coloured dot, scaled to fit the canvas, north up. */
+function draw(points, df) {
+  const xs = [], ys = [];
+  for (let i = 0; i < df.length; i++) { xs.push(points[3 * i]); ys.push(points[3 * i + 1]); }
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const size = canvas.width, pad = 40;
+  const s = (size - 2 * pad) / Math.max(x1 - x0, y1 - y0, 1);
+  const ox = (size - (x1 - x0) * s) / 2, oy = (size - (y1 - y0) * s) / 2;
+  ctx.clearRect(0, 0, size, size);
+  const r = 0.2 * s;  // sensors are 0.3 m apart
+  for (let i = 0; i < df.length; i++) {
+    ctx.fillStyle = colour(df[i]);
+    ctx.beginPath();
+    ctx.arc(ox + (xs[i] - x0) * s, size - oy - (ys[i] - y0) * s, r, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  ctx.fillStyle = getComputedStyle(document.body).color;
+  ctx.font = '24px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('N ↑', size / 2, 28);
+}
+
+/** Send the current room and draw the answer. */
+async function run() {
+  const id = ++latest;
+  const started = performance.now();
+  $('status').textContent = 'Simulating…';
+  try {
+    const res = await fetch('v1/daylight', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(request(readForm())),
+    });
+    if (res.status === 429) throw new Error('Too many runs, wait a moment');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail?.message || res.statusText);
+    if (id !== latest) return;
+    draw(unpack(data.sensor_points), unpack(data.df));
+    $('mean').textContent = data.df_summary.mean_df.toFixed(1) + ' %';
+    $('status').textContent = `${data.sensor_count} sensors · Foton ${data.seconds.toFixed(1)} s · total ${((performance.now() - started) / 1000).toFixed(1)} s`;
+  } catch (err) {
+    if (id === latest) $('status').textContent = err.message;
+  }
+}
+
+form.addEventListener('input', readForm);   // update the numbers while dragging
+form.addEventListener('change', run);       // simulate when the slider is released
+readForm();
+run();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Foton demo: one static page plus nginx, which forwards /v1/daylight to the
+# simulation API on this machine and adds the API key, so the key never
+# reaches the browser. No Foton here: the API's daylight queue runs the jobs.
+#
+#   echo DEMO_KEY=<key from APP_KEYS> > .env
+#   docker compose up -d
+#   open http://<host>:8080
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    env_file: .env
+    environment:
+      API_URL: ${API_URL:-http://host.docker.internal:8000}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    ports: ["${DEMO_PORT:-8080}:80"]
+    restart: unless-stopped
+    logging:
+      options: {max-size: 10m, max-file: "3"}
