@@ -112,7 +112,8 @@ To rotate one without downtime, add the new key under a second name
 | `python scripts/stress_test.py --key <k> --constructions c.json` | 20 students for 20 minutes (see the script for options) |
 
 Settings live in `.env` (see `.env.example`). The ones you may want to change:
-`APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` (default: CPU cores),
+`APP_KEYS`, `ALLOWED_ORIGINS`, `ENERGY_CONCURRENCY` / `DAYLIGHT_CONCURRENCY`
+(default: chosen from the hardware, see [Capacity](#capacity)),
 `RESULT_TTL_SECONDS` (default 600), `FOTON_BACKEND`.
 
 ## Deployment
@@ -147,9 +148,8 @@ once per machine.
    - `APP_KEYS`: one key per client app (see [API keys](#api-keys)).
    - `FOTON_BACKEND=vulkan`, so daylight fails loudly if the GPU is missing
      instead of falling back to the CPU (minutes per job instead of seconds).
-   - `ENERGY_CONCURRENCY`: physical cores minus two (for example 6 on an
-     8-core, 16-thread CPU). EnergyPlus is single-threaded and the default
-     (every thread) oversubscribes the CPU.
+   - Leave `ENERGY_CONCURRENCY` and `DAYLIGHT_CONCURRENCY` unset: the workers
+     size themselves from the cores and GPUs they see.
 
 4. **Start it:** `docker compose up -d --build --wait`
 
@@ -188,6 +188,22 @@ To run the stack without Docker: start `redis-server`, then
 
 ## Capacity
 
+Worker counts are chosen at startup by `worker/concurrency.py`: one EnergyPlus
+process per physical core and two Foton processes per GPU. A sweep on the
+Precision 7540 (i9-9880H with 8 cores, Quadro RTX 3000) picked this over 6 to 12
+energy and 1 to 2 daylight processes as the best across five load patterns:
+
+| Load (clients sending back to back) | Requests/min | Median | p95 |
+|---|---|---|---|
+| 4 clients, `/v1/simulate` | 62 | 3.8 s | 5.0 s |
+| 24 clients, daylight `preview` | 124 | 10.9 s | 13.0 s |
+| 12 clients, daylight `final` | 46 | 15.2 s | 16.6 s |
+| 24 clients, energy | 148 | 9.4 s | 10.6 s |
+| 24 clients, daylight + energy + simulate | 121 | 11.7 s | 16.3 s |
+
+Under a full class the time is mostly queueing; one request on an idle
+machine takes about 1 s (daylight `preview`) or 2 s (energy).
+
 Measured 2026-11-04 on a 4-core cloud machine (energy only, 1 to 5 storey
 buildings, each student waiting 5 to 30 s between requests):
 
@@ -200,12 +216,12 @@ buildings, each student waiting 5 to 30 s between requests):
 - **Energy** scales with cores: about 34 runs per minute per core, which is
   roughly **10 active students per core**. Running more workers than cores
   only adds waiting.
-- **Daylight** runs one job at a time on the GPU (about 1 s per job on an
-  M4 Pro), so it serves about 60 requests per minute. Measure it on the real GPU.
+- **Daylight** is limited by the GPU: about 125 `preview` or 46 `final`
+  requests per minute on the Quadro RTX 3000.
 - **Docker** on Linux gives containers every core and all memory unless
   limits are set, so leave `cpus:`/`mem_limit:` out of the compose file. If you
-  do limit CPUs with `--cpus`, set `ENERGY_CONCURRENCY` to match, because
-  `nproc` in the container still reports every core. Each EnergyPlus run needs
+  do limit CPUs with `--cpus`, the energy worker sees the limit and runs
+  fewer processes. Each EnergyPlus run needs
   about 200 MB of memory. Docker Desktop (macOS/Windows) runs in a VM with its
   own CPU and memory limits (Settings → Resources).
 
