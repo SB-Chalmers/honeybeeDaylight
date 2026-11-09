@@ -106,3 +106,15 @@ def test_grasshopper_file_holds_the_request(client):
     assert float(item('wwr_south_', 'Value')) == 0.6
     assert item('all_floors_', 'ToggleValue') == 'false'
     assert 'def sensor_points' in item('Heath Sensors', 'CodeInput')
+
+
+def test_grasshopper_file_takes_a_single_wwr_like_heath_sends(client):
+    import xml.etree.ElementTree as ET
+    from api.grasshopper import _objects
+
+    room = {'footprint_coordinates': [[0, 0], [9, 0], [9, 7], [0, 7]], 'wwr': 0.45}
+    response = post(client, '/v1/grasshopper', {'room': room})
+    assert response.status_code == 200, response.text
+    objects = dict(_objects(ET.fromstring(response.content)))
+    for nick in ('wwr_north_', 'wwr_east_', 'wwr_south_', 'wwr_west_'):
+        assert float(objects[nick].find(".//item[@name='Value']").text) == 0.45
