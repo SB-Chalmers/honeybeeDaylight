@@ -13,7 +13,10 @@ its grid with the world axes instead, which puts the sensors elsewhere (and
 drops cells on rotated buildings). Same rule as simulation/model.py.
 
 Inputs: _floors (closed polylines), _size_ (m, default 0.5), _offset_ (m, default 0.75)
-Output: points (a tree, one branch per room)
+Outputs: points (a tree, one branch per floor)
+         mesh   one square face per sensor, the grid cell around it, in the same
+                order: give it to HB Sensor Grid's mesh_ input (or straight to
+                LB Spatial Heatmap) to colour the result cell by cell
 """
 
 import math
@@ -36,8 +39,12 @@ def _arange(start, stop, step):
     return [start + i * step for i in range(max(0, int(math.ceil((stop - start) / step))))]
 
 
-def sensor_points(footprint, size=0.5, offset=0.75):
-    """(x, y, z) sensor positions over a floor given as footprint (x, y, z) points."""
+def sensor_points(footprint, size=0.5, offset=0.75, cells=None):
+    """(x, y, z) sensor positions over a floor given as footprint (x, y, z) points.
+
+    When ``cells`` is a list, the four corners of each sensor's grid cell are
+    appended to it, counter-clockwise seen from above.
+    """
     z = footprint[0][2] + offset
     polygon = [(p[0], p[1]) for p in reversed(footprint)]  # the Honeybee floor face order
     ox, oy = polygon[0]
@@ -53,6 +60,10 @@ def sensor_points(footprint, size=0.5, offset=0.75):
             x, y = ox + u * ux + v * vx, oy + u * uy + v * vy
             if _inside(polygon, x, y):
                 points.append((x, y, z))
+                if cells is not None:
+                    h = size / 2
+                    cells.append([(x + a * h * ux + b * h * vx, y + a * h * uy + b * h * vy, z)
+                                  for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
     return points
 
 
@@ -62,8 +73,18 @@ if 'ghenv' in globals() and _floors:
     from Grasshopper.Kernel.Data import GH_Path
 
     points = DataTree[object]()
+    mesh = DataTree[object]()
     for i, curve in enumerate(_floors):
         ok, polyline = curve.TryGetPolyline()
         corners = [(p.X, p.Y, p.Z) for p in polyline][:-1]  # drop the closing point
-        for x, y, z in sensor_points(corners, _size_ or 0.5, _offset_ or 0.75):
+        cells = []
+        floor_mesh = rg.Mesh()
+        for x, y, z in sensor_points(corners, _size_ or 0.5, _offset_ or 0.75, cells):
             points.Add(rg.Point3d(x, y, z), GH_Path(i))
+        for cell in cells:
+            first = floor_mesh.Vertices.Count
+            for x, y, z in cell:
+                floor_mesh.Vertices.Add(x, y, z)
+            floor_mesh.Faces.AddFace(first, first + 1, first + 2, first + 3)
+        floor_mesh.Normals.ComputeNormals()
+        mesh.Add(floor_mesh, GH_Path(i))

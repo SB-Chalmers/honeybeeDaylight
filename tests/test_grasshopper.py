@@ -75,3 +75,18 @@ def test_clockwise_footprint_is_reversed_like_the_api():
 ])
 def test_daylight_floors_get_their_own_zone(floors, alone, expected):
     assert heath_request.floor_groups({}, floors, alone) == expected
+
+
+def test_each_sensor_gets_its_grid_cell():
+    footprint = _rotated(load_room_inputs({'footprint_coordinates': L_SHAPE, 'orientation_offset': 33.0}), 1)
+    cells = []
+    points = heath_sensors.sensor_points(footprint, 0.5, 0.75, cells)
+    assert len(cells) == len(points)
+    for point, cell in zip(points, cells):
+        centre = [sum(c[k] for c in cell) / 4 for k in range(3)]
+        assert all(math.isclose(a, b, abs_tol=1e-9) for a, b in zip(centre, point))
+        side = math.dist(cell[0], cell[1])
+        assert math.isclose(side, 0.5) and math.isclose(math.dist(cell[1], cell[2]), 0.5)
+        # counter-clockwise seen from above: upward normal
+        (x0, y0, _), (x1, y1, _), (x2, y2, _) = cell[:3]
+        assert (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0) > 0
