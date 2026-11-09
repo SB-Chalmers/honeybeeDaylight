@@ -25,13 +25,12 @@ and cooling 0.3% lower.
 
 ## What is not stock
 
-Three small GhPython components:
+Two small GhPython components:
 
 1. **Heath Request** (`heath_request.py`) reads the JSON: footprint, context,
    energy zones, EPSM construction layers and the weather file.
 2. **Heath Sensors** (`heath_sensors.py`) lays out the sensor grid. Heath's
    grid turns with the building, whereas *HB Sensor Grid from Rooms* follows the world axes.
-3. Canvas notes mark any other workaround.
 
 The template also differs from the backend in two ways, neither of which changes
 the results:
