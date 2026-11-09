@@ -11,7 +11,7 @@ Grasshopper:
 - program type, EPSM constructions and an unlimited ideal air system
   (HB Program / Construction Set / Ideal Air);
 - context buildings as detached shades (HB Shade);
-- SimulationParameter: no sizing, 4 timesteps/hour, FullExterior.
+- SimulationParameter: no sizing, 3 timesteps/hour, FullExterior.
 """
 
 from __future__ import annotations
@@ -231,9 +231,11 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     sim.simulation_control.do_plant_sizing = False
     sim.simulation_control.run_for_sizing_periods = False
     sim.simulation_control.run_for_run_periods = True
-    # 4 timesteps per hour instead of 6: ~25 % faster, annual heating and
-    # cooling within 0.3 % (HB Simulation Parameter: _timestep_ = 4).
-    sim.timestep = 4
+    # 3 timesteps per hour instead of Honeybee's 6 (HB Simulation Parameter:
+    # _timestep_ = 3). Measured on the 7540 against 4: 20 % faster, monthly
+    # heating and cooling within 2 %. 2 per hour is 37 % faster but drifts
+    # 6 % in some months, over the 5 % the Heath charts allow.
+    sim.timestep = 3
     # Exterior shading only, without reflections: much cheaper, and context
     # buildings still cast shadows (HB Shadow Calculation: FullExterior).
     sim.shadow_calculation.solar_distribution = 'FullExterior'
