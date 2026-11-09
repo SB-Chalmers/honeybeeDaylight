@@ -89,7 +89,7 @@ class Teacher:
 
 
 def student(index, args, constructions, t0, stop_at, teacher, records, lock):
-    rng = random.Random(index)
+    rng = random.Random(f'{args.seed}-{index}')
     timeout = httpx.Timeout(args.give_up or 1800, connect=10)
     with httpx.Client(base_url=args.url, timeout=timeout) as client:
         while time.time() < stop_at:
@@ -282,7 +282,13 @@ def main():
     parser.add_argument('--give-up', type=float, default=60, help='seconds a student waits before retrying (0: never)')
     parser.add_argument('--constructions', help='JSON file with EPSM construction names')
     parser.add_argument('--report', default='report.html')
+    parser.add_argument('--seed', default=None,
+                        help='seed for the random buildings (default: a new one each run, so repeated runs '
+                             'are not answered from the API cache; pass the same seed to repeat a run)')
     args = parser.parse_args()
+    if args.seed is None:
+        args.seed = str(int(time.time()))
+    print(f'seed {args.seed}')
 
     constructions = json.load(open(args.constructions)) if args.constructions else None
     if args.path != '/v1/daylight' and not constructions:
