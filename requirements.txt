@@ -14,7 +14,7 @@ ladybug-core==0.44.53
 ladybug-geometry==1.35.1
 
 # Daylight. Foton 0.3 builds its own sky matrix, so Radiance is not needed.
-foton-daylight[honeybee]==0.3.3
+foton-daylight[honeybee]==0.3.6
 numpy==2.1.0
 
 # EnergyPlus HTML summary parsing
