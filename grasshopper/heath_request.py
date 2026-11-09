@@ -17,7 +17,7 @@ Outputs:
     shared_edges   per footprint edge, the floors where it is a party wall
     program        honeybee-energy program type for the Heath building_program
     natural_vent   True when Heath's natural ventilation is on (no cooling)
-    wall_layers, roof_layers, floor_layers   EPSM layers as
+    wall_layers, roof_layers, floor_layers   EPSM layers, one branch per layer:
                    [name, thickness, conductivity, density, specific heat]
     window_u       EPSM window U-value (W/m2K); SHGC is 0.40 like the backend
     epw            weather file path; quality, da_lux, sda_target: daylight options
@@ -188,4 +188,17 @@ if 'ghenv' in globals() and _request:
         roof_layers = layer_values(records['roof'])
         floor_layers = layer_values(records['floor'])
         window_u = records['window'].get('u_value_w_m2k', 2.0)
-    epw = weather_file(request, os.path.join(tempfile.gettempdir(), 'heath'))
+        # Nested lists reach Grasshopper as opaque objects; one branch per layer
+        # lets List Item feed the HB Opaque Material inputs.
+        from Grasshopper import DataTree
+        from Grasshopper.Kernel.Data import GH_Path
+
+        def _tree(rows):
+            tree = DataTree[object]()
+            for i, row in enumerate(rows):
+                tree.AddRange(row, GH_Path(i))
+            return tree
+
+        wall_layers, roof_layers, floor_layers = (
+            _tree(wall_layers), _tree(roof_layers), _tree(floor_layers))
+    epw =weather_file(request, os.path.join(tempfile.gettempdir(), 'heath'))
