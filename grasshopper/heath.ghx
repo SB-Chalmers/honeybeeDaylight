@@ -49,10 +49,10 @@
             <chunk name="Projection">
               <items count="2">
                 <item name="Target" type_name="gh_drawing_point" type_code="30">
-                  <X>-1602</X>
-                  <Y>-318</Y>
+                  <X>-331</X>
+                  <Y>200</Y>
                 </item>
-                <item name="Zoom" type_name="gh_single" type_code="5">0.47866586</item>
+                <item name="Zoom" type_name="gh_single" type_code="5">0.17858328</item>
               </items>
             </chunk>
             <chunk name="Views">
@@ -69,9 +69,9 @@
         </chunk>
         <chunk name="GHALibraries">
           <items count="1">
-            <item name="Count" type_name="gh_int32" type_code="3">9</item>
+            <item name="Count" type_name="gh_int32" type_code="3">8</item>
           </items>
-          <chunks count="9">
+          <chunks count="8">
             <chunk name="Library" index="0">
               <items count="4">
                 <item name="Author" type_name="gh_string" type_code="10">Robert McNeel &amp; Associates</item>
@@ -129,14 +129,6 @@
               </items>
             </chunk>
             <chunk name="Library" index="7">
-              <items count="4">
-                <item name="Author" type_name="gh_string" type_code="10">Robert McNeel &amp; Associates</item>
-                <item name="Id" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
-                <item name="Name" type_name="gh_string" type_code="10">Grasshopper</item>
-                <item name="Version" type_name="gh_string" type_code="10">8.35.26251.13002</item>
-              </items>
-            </chunk>
-            <chunk name="Library" index="8">
               <items count="6">
                 <item name="AssemblyFullName" type_name="gh_string" type_code="10">GhPython, Version=8.35.26251.13002, Culture=neutral, PublicKeyToken=null</item>
                 <item name="AssemblyVersion" type_name="gh_string" type_code="10">8.35.26251.13002</item>
@@ -150,9 +142,9 @@
         </chunk>
         <chunk name="DefinitionObjects">
           <items count="1">
-            <item name="ObjectCount" type_name="gh_int32" type_code="3">172</item>
+            <item name="ObjectCount" type_name="gh_int32" type_code="3">171</item>
           </items>
-          <chunks count="172">
+          <chunks count="171">
             <chunk name="Object" index="0">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
@@ -2705,7 +2697,7 @@ be shade depths, angles, etc. for the "HB Louver Shades" component.
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">true</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
-                      <bitmap length="1503">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</bitmap>
+                      <bitmap length="1514">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</bitmap>
                     </item>
                     <item name="InputIsPath" type_name="gh_bool" type_code="1">false</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">b9583e71-e2ad-4f18-a2c3-7ccbd6383bf8</item>
@@ -3659,7 +3651,7 @@ assignment of child objects.
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">true</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
-                      <bitmap length="1213">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADiNXWtAAAEJ0lEQVRIDc2WXWgcVRTH/zszO7s7k90m2U02G9OkCZt0E6OtNTFpHmKgkkgtlVIoSGihRQQlvohStAoKEfFBWtsXRUKliDQ+iCKatpFqpdJqSAvFpLUlFZsWpyRx87HfO7PjudfMNrNkbR4UPCyzd++55/zOuefcOwv8T6XcI0snaitLXv8v4tvW0Rr4/dLQE+axgc0mAfb+W5AGxSUNH38unE2ffto0v99l5s7uMndurY4RoL4YRCymKJjvf/yhyq++GOzc0ttdKxgZA6mkAVFwoLejSr7860LdTS3+WYEN/7kWQOu2+sqR/h11Sl+7H+mkDiNnwuEAdN1EaZkMvypHPj07rZLH0ULIfQFtTf5PTh3tahy7+ieGv/sDT3WHkE0b3A+H0LglUoqlJaPrwuTcRVJMrYTcD/Da0YG2Zzc3ex2PNZVi6Jtb8MoiWsI+ZNI5ngVzZmZz6OusgjaXeXT8RvRLmlq0III1WOW7e3/fhrd39wQcyfkMDHJy7MVWjF6agzaTguy8Z5qlrRJh4uU94eZgueck+cori2Ug9LYHP//4lS0hwTT5nuuGifKAG3e0BIZO3cbunmromRyPi28VBRBsWgdXFrUjP2s6KX5gyjyJr1x+SJJ4/P3nH36kRBWRXuEkuZDBgZ0bIFKBh7+9A0+pDJMCUBQJskvE4Q8ncWEyio6If5PlbzXA3jf3RfZFwl4k4np+n5kBO1WZeBZHBloxdmMRV64tQA0qGB2fxYH3riBOdTnywoMQRFRZAMkaLH9X7H9y/eCrzzQivZQtUP39k+23t0TCjo4KvHXiOhpqVEzeXMSh/kZ0tVdAn88iljZclrEtA9HheOngno21As3q1OurCdvvRExHz9YgagIykvEMvn63E10tZUjOpWCSbTik5rvIlgE5lnM5KhwVlPwUF6ZMGdjUsA61FW6AbBJ0ABmcDjfI2GMZ2wCSIGSYdk1Cnm7PJOBTqBGXk+W+aazNpkIcQxrbFjWtL7nrU528LdcCyVEH0ScvbChQi/ncTjbHj4AN8Mtviw9EYxl+ieWtig3Ic7nPBad0L2MOI0Bbs08jM36f2AAUkWgWKe5qnBytXZmBhbo2naih9byTbID6kHLXqzipZivyXs0zm6OKzlO2VrcxEL8+PBLiSYMBFLbMBsjqoJuBVlqhsBX/IOx9wJfSQ/U5sUDviIF3LuP8xOxhMmMvIti6iLoiEKf2E5ghs2SJWLCVY2ZJWYb8HpRSU0CVce5HDQc/mjj909W5QdKeZ0uY2ACS6HCqbiq+W4LHamo6E1zYBcSyY/cbg/pkxJJZTGkmTr4xnhw6M3WIZlnkNrHi45OKIm5vD5d94HIKQolHTNUF1OjE9ALradRXe2eiiwl1PmYosmDqGxvKZkcualXXb8XGdNNk/y4muJOCx1+F7HjxZXMtkAAAAABJRU5ErkJggg==</bitmap>
+                      <bitmap length="1213">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADB/VeXAAAEM0lEQVRIDc1We2xTZRT/9d72bu1du+5Ru0EZUGmzzZlu6AYscxJpUoOLhvmHQcAoMcaQqYn/KcZAgjESDST8ocQsJIsxTgyJUZhkBueDzLg4IoFBlBFQwI49uldf9+n5Lrtd77KKf2jiSXvvuef1O+c75/vuBf6nVO5xCj3t91e/8V/kt6V9vf/6cHdUP9LVqBPArn8LJFgqCr09L4bk7OkndH1gm66d2aZ3tq2cJ4C1hUD4Qool8h1bGv1fHN+/YX30oVWcKqnIpFXwnA3RZr8wlVBWnxtNfLrEx3j8JwAN0eA9fdu3rnbFmiuQTStQNR02G6AoOrxlAihI7cdn/hApYv9SkLsCxB5c8dGJgy2hoUtT6P3mTzzWXg05qxpxDBDi62u9mJtTWwdHJn8kxWg+yN0AXj/4QuPzkTq3rSXsRfep3+EWeNSv80DKakYVLJgua4htrIIi2x74/sLE5ySaNUE4k1nm3v5cbM1bnQ9X2tLTElQKcuSlBvQPTyI+noHgWHSVaal46Hj20VV1Nf6STyhWTlmoAu6pRwIn3n8lUs3purHmiqqjvLIYN+MpdH91A09uXgFF0oy8jKWiBPzhUtizWk3fT3GFFN8xZQ7JsFy4CILj2L6ddU0lIo9sXpD0jITdj68BTw3u/fomnF4BOiXgctkhFPE4dHQEgyMJdLYFIma85QB2vbkz/EztOjdSSSW3zsyB7SopKeNwVwOGfpvF+cszEP0u9P88gd3vnUeS+nJ4z33IKmqVCWA3mYW77+XOtQde2x5Cdk5eorrzyNbbXWJHxwYf9vf8imBAxMjVWezdEUJrsw/KtIyppFxkOlsqEDju1T0d99ZwJFVo1pcjtt6peQWbN/kRqBSQTko4+c5GtNaXIT2ZgU6+zeGy3BRZKuB5CJpGjaOGUpzCxJQZFZFgKWp8xQD5pGgDMnDa3JBVzWk6WwCK7XYJfx/a9DMi3RhPweOiQVwoluHaiL98ba6asfRnBS3S09HAmEd0GGO5KC3MaTRB9MsRYzkasTKnwGTGFrAAfHjy2srEvGQcYjmvQgxFLvcUwWFnid4hA4wAOtp8cZIY54kFQNE0Xi/QXDNI/l0j2/wKTKiBXxIBsjMmyQIQa/GNuV0O6lle3fkR83nq6DRVa04bAzKOD6cdtxNZBuBi5haA+RToZCBLM5X8gMvw7H1gmNJF9DgwQ++IrrfPYXh0+hCZsxcRLFN09sJ4ZZLGj2OOzJMVYoLl88yTqqyucMJLQwFRwLdn43j3+JXTXw7eOkDaH5gJIwtAkYNziMXU/GI7nOZQ054wiB1ArDp2vjFQj4D5tIzRuI7P9g2nj/Zd2UtSlrmFzPwMYTDo2hoqd39AQFyZ256J1HgTAxdvs5lGU7hi/Nb4rDiWkF1OHsqmJv/EsVPXqy5dnR2SdJ19XVw0giy5/AXRXn5XatobUAAAAABJRU5ErkJggg==</bitmap>
                     </item>
                     <item name="InputIsPath" type_name="gh_bool" type_code="1">false</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">52497bc8-7238-4620-aec7-9f17c5b582e4</item>
@@ -3710,7 +3702,7 @@ in the Rhino scene.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>2191</X>
                                   <Y>22</Y>
@@ -3721,6 +3713,7 @@ in the Rhino scene.</item>
                                   <X>2231.5</X>
                                   <Y>51.5</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -3737,7 +3730,7 @@ visible in the Rhino scene.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>2283</X>
                                   <Y>22</Y>
@@ -3748,6 +3741,7 @@ visible in the Rhino scene.</item>
                                   <X>2295</X>
                                   <Y>51.5</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -6927,7 +6921,10 @@ its grid with the world axes instead, which puts the sensors elsewhere (and
 drops cells on rotated buildings). Same rule as simulation/model.py.
 
 Inputs: _floors (closed polylines), _size_ (m, default 0.5), _offset_ (m, default 0.75)
-Output: points (a tree, one branch per room)
+Outputs: points (a tree, one branch per floor)
+         mesh   one square face per sensor, the grid cell around it, in the same
+                order: give it to HB Sensor Grid's mesh_ input (or straight to
+                LB Spatial Heatmap) to colour the result cell by cell
 """
 
 import math
@@ -6950,8 +6947,12 @@ def _arange(start, stop, step):
     return [start + i * step for i in range(max(0, int(math.ceil((stop - start) / step))))]
 
 
-def sensor_points(footprint, size=0.5, offset=0.75):
-    """(x, y, z) sensor positions over a floor given as footprint (x, y, z) points."""
+def sensor_points(footprint, size=0.5, offset=0.75, cells=None):
+    """(x, y, z) sensor positions over a floor given as footprint (x, y, z) points.
+
+    When ``cells`` is a list, the four corners of each sensor's grid cell are
+    appended to it, counter-clockwise seen from above.
+    """
     z = footprint[0][2] + offset
     polygon = [(p[0], p[1]) for p in reversed(footprint)]  # the Honeybee floor face order
     ox, oy = polygon[0]
@@ -6967,6 +6968,10 @@ def sensor_points(footprint, size=0.5, offset=0.75):
             x, y = ox + u * ux + v * vx, oy + u * uy + v * vy
             if _inside(polygon, x, y):
                 points.append((x, y, z))
+                if cells is not None:
+                    h = size / 2
+                    cells.append([(x + a * h * ux + b * h * vx, y + a * h * uy + b * h * vy, z)
+                                  for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
     return points
 
 
@@ -6976,11 +6981,21 @@ if 'ghenv' in globals() and _floors:
     from Grasshopper.Kernel.Data import GH_Path
 
     points = DataTree[object]()
+    mesh = DataTree[object]()
     for i, curve in enumerate(_floors):
         ok, polyline = curve.TryGetPolyline()
         corners = [(p.X, p.Y, p.Z) for p in polyline][:-1]  # drop the closing point
-        for x, y, z in sensor_points(corners, _size_ or 0.5, _offset_ or 0.75):
+        cells = []
+        floor_mesh = rg.Mesh()
+        for x, y, z in sensor_points(corners, _size_ or 0.5, _offset_ or 0.75, cells):
             points.Add(rg.Point3d(x, y, z), GH_Path(i))
+        for cell in cells:
+            first = floor_mesh.Vertices.Count
+            for x, y, z in cell:
+                floor_mesh.Vertices.Add(x, y, z)
+            floor_mesh.Faces.AddFace(first, first + 1, first + 2, first + 3)
+        floor_mesh.Normals.ComputeNormals()
+        mesh.Add(floor_mesh, GH_Path(i))
 </item>
                     <item name="Description" type_name="gh_string" type_code="10">Heath Sensors: the backend's sensor points for Honeybee rooms.
 Code of the "Heath Sensors" GhPython component; feed its output to the stock
@@ -6994,7 +7009,10 @@ the floor, ``offset`` metres above it. Stock "HB Sensor Grid from Rooms" aligns
 its grid with the world axes instead, which puts the sensors elsewhere (and
 drops cells on rotated buildings). Same rule as simulation/model.py.
 Inputs: _floors (closed polylines), _size_ (m, default 0.5), _offset_ (m, default 0.75)
-Output: points (a tree, one branch per room)</item>
+Outputs: points (a tree, one branch per floor)
+         mesh   one square face per sensor, the grid cell around it, in the same
+order: give it to HB Sensor Grid's mesh_ input (or straight to
+LB Spatial Heatmap) to colour the result cell by cell</item>
                     <item name="Hidden" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">false</item>
@@ -7021,16 +7039,17 @@ Output: points (a tree, one branch per room)</item>
                       </items>
                     </chunk>
                     <chunk name="ParameterData">
-                      <items count="7">
+                      <items count="8">
                         <item name="InputCount" type_name="gh_int32" type_code="3">3</item>
                         <item name="InputId" index="0" type_name="gh_guid" type_code="9">84fa917c-1ed8-4db3-8be1-7bdc4a6495a2</item>
                         <item name="InputId" index="1" type_name="gh_guid" type_code="9">84fa917c-1ed8-4db3-8be1-7bdc4a6495a2</item>
                         <item name="InputId" index="2" type_name="gh_guid" type_code="9">84fa917c-1ed8-4db3-8be1-7bdc4a6495a2</item>
-                        <item name="OutputCount" type_name="gh_int32" type_code="3">2</item>
+                        <item name="OutputCount" type_name="gh_int32" type_code="3">3</item>
                         <item name="OutputId" index="0" type_name="gh_guid" type_code="9">3ede854e-c753-40eb-84cb-b48008f14fd4</item>
                         <item name="OutputId" index="1" type_name="gh_guid" type_code="9">8ec86459-bf01-4409-baee-174d0d2b13d0</item>
+                        <item name="OutputId" index="2" type_name="gh_guid" type_code="9">8ec86459-bf01-4409-baee-174d0d2b13d0</item>
                       </items>
-                      <chunks count="5">
+                      <chunks count="6">
                         <chunk name="InputParam" index="0">
                           <items count="12">
                             <item name="Access" type_name="gh_int32" type_code="3">1</item>
@@ -7141,11 +7160,11 @@ Output: points (a tree, one branch per room)</item>
                                   <X>775</X>
                                   <Y>839</Y>
                                   <W>35</W>
-                                  <H>47</H>
+                                  <H>31</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>792.5</X>
-                                  <Y>862.5</Y>
+                                  <Y>854.6667</Y>
                                 </item>
                               </items>
                             </chunk>
@@ -7165,13 +7184,39 @@ Output: points (a tree, one branch per room)</item>
                               <items count="2">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>775</X>
-                                  <Y>886</Y>
+                                  <Y>870</Y>
                                   <W>35</W>
-                                  <H>47</H>
+                                  <H>31</H>
                                 </item>
                                 <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                                   <X>792.5</X>
-                                  <Y>909.5</Y>
+                                  <Y>886</Y>
+                                </item>
+                              </items>
+                            </chunk>
+                          </chunks>
+                        </chunk>
+                        <chunk name="OutputParam" index="2">
+                          <items count="6">
+                            <item name="Description" type_name="gh_string" type_code="10">Script variable Heath Sensors</item>
+                            <item name="InstanceGuid" type_name="gh_guid" type_code="9">f7b772c5-bf2a-487b-84ba-8208a1eb48bf</item>
+                            <item name="Name" type_name="gh_string" type_code="10">mesh</item>
+                            <item name="NickName" type_name="gh_string" type_code="10">mesh</item>
+                            <item name="Optional" type_name="gh_bool" type_code="1">false</item>
+                            <item name="SourceCount" type_name="gh_int32" type_code="3">0</item>
+                          </items>
+                          <chunks count="1">
+                            <chunk name="Attributes">
+                              <items count="2">
+                                <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
+                                  <X>775</X>
+                                  <Y>901</Y>
+                                  <W>35</W>
+                                  <H>32</H>
+                                </item>
+                                <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
+                                  <X>792.5</X>
+                                  <Y>917.3334</Y>
                                 </item>
                               </items>
                             </chunk>
@@ -7876,7 +7921,7 @@ assigned for all the sensors.</item>
                           </chunks>
                         </chunk>
                         <chunk name="InputParam" index="3">
-                          <items count="10">
+                          <items count="11">
                             <item name="AllowTreeAccess" type_name="gh_bool" type_code="1">true</item>
                             <item name="Description" type_name="gh_string" type_code="10">An optional mesh that aligns with the sensors. This is useful for
 generating visualizations of the sensor grid beyond the sensor
@@ -7888,7 +7933,8 @@ the number of faces or the number vertices within the mesh.</item>
                             <item name="Optional" type_name="gh_bool" type_code="1">true</item>
                             <item name="ScriptParamAccess" type_name="gh_int32" type_code="3">0</item>
                             <item name="ShowTypeHints" type_name="gh_bool" type_code="1">true</item>
-                            <item name="SourceCount" type_name="gh_int32" type_code="3">0</item>
+                            <item name="Source" index="0" type_name="gh_guid" type_code="9">f7b772c5-bf2a-487b-84ba-8208a1eb48bf</item>
+                            <item name="SourceCount" type_name="gh_int32" type_code="3">1</item>
                             <item name="TypeHintID" type_name="gh_guid" type_code="9">794a1f9d-21d5-4379-b987-9e8bbf433912</item>
                           </items>
                           <chunks count="1">
@@ -9793,7 +9839,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>350</Y>
@@ -9804,6 +9850,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>360</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -9832,7 +9879,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>370</Y>
@@ -9843,6 +9890,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>380</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -9870,7 +9918,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>390</Y>
@@ -9881,6 +9929,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>400</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -9908,7 +9957,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>410</Y>
@@ -9919,6 +9968,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>420</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -9947,7 +9997,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>430</Y>
@@ -9958,6 +10008,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>440</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -9985,7 +10036,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>450</Y>
@@ -9996,6 +10047,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>460</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10024,7 +10076,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>470</Y>
@@ -10035,6 +10087,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>480</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10062,7 +10115,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>490</Y>
@@ -10073,6 +10126,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>500</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10100,7 +10154,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>510</Y>
@@ -10111,6 +10165,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>520</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10138,7 +10193,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>530</Y>
@@ -10149,6 +10204,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>540</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10176,7 +10232,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>550</Y>
@@ -10187,6 +10243,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>560</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10214,7 +10271,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>570</Y>
@@ -10225,6 +10282,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>580</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10252,7 +10310,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>590</Y>
@@ -10263,6 +10321,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>600</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10290,7 +10349,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>610</Y>
@@ -10301,6 +10360,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>620</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10328,7 +10388,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>630</Y>
@@ -10339,6 +10399,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>640</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10366,7 +10427,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>650</Y>
@@ -10377,6 +10438,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>660</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10404,7 +10466,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>670</Y>
@@ -10415,6 +10477,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>680</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10443,7 +10506,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3751</X>
                                   <Y>690</Y>
@@ -10454,6 +10517,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3798</X>
                                   <Y>700</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10481,7 +10545,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>350</Y>
@@ -10492,6 +10556,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>362</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10519,7 +10584,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>374</Y>
@@ -10530,6 +10595,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>386</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10557,7 +10623,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>398</Y>
@@ -10568,6 +10634,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>410</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10595,7 +10662,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>422</Y>
@@ -10606,6 +10673,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>434</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10633,7 +10701,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>446</Y>
@@ -10644,6 +10712,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>458</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10671,7 +10740,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>470</Y>
@@ -10682,6 +10751,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>482</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10709,7 +10779,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>494</Y>
@@ -10720,6 +10790,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>506</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10747,7 +10818,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>518</Y>
@@ -10758,6 +10829,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>530</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10785,7 +10857,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>542</Y>
@@ -10796,6 +10868,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>554</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10823,7 +10896,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>566</Y>
@@ -10834,6 +10907,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>578</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10861,7 +10935,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>590</Y>
@@ -10872,6 +10946,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>602</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10899,7 +10974,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>614</Y>
@@ -10910,6 +10985,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>626</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10937,7 +11013,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>638</Y>
@@ -10948,6 +11024,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>650</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -10975,7 +11052,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>662</Y>
@@ -10986,6 +11063,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>674</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -11013,7 +11091,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>3872</X>
                                   <Y>686</Y>
@@ -11024,6 +11102,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                                   <X>3904.5</X>
                                   <Y>698</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="ConverterData">
@@ -11239,16 +11318,16 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                       <items count="5">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>4097</X>
-                          <Y>530</Y>
+                          <Y>531</Y>
                           <W>160</W>
-                          <H>40</H>
+                          <H>55</H>
                         </item>
                         <item name="MarginLeft" type_name="gh_int32" type_code="3">0</item>
                         <item name="MarginRight" type_name="gh_int32" type_code="3">0</item>
                         <item name="MarginTop" type_name="gh_int32" type_code="3">0</item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>4097.7207</X>
-                          <Y>530.8553</Y>
+                          <Y>531.18353</Y>
                         </item>
                       </items>
                     </chunk>
@@ -11292,16 +11371,16 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
                       <items count="5">
                         <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                           <X>4267</X>
-                          <Y>530</Y>
+                          <Y>531</Y>
                           <W>100</W>
-                          <H>40</H>
+                          <H>53</H>
                         </item>
                         <item name="MarginLeft" type_name="gh_int32" type_code="3">0</item>
                         <item name="MarginRight" type_name="gh_int32" type_code="3">0</item>
                         <item name="MarginTop" type_name="gh_int32" type_code="3">0</item>
                         <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
                           <X>4267.7207</X>
-                          <Y>530.8553</Y>
+                          <Y>531.14246</Y>
                         </item>
                       </items>
                     </chunk>
@@ -11482,149 +11561,6 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
               </chunks>
             </chunk>
             <chunk name="Object" index="63">
-              <items count="2">
-                <item name="GUID" type_name="gh_guid" type_code="9">1eb4f6ff-3547-4184-bead-1b01e7cfd668</item>
-                <item name="Name" type_name="gh_string" type_code="10">Delaunay Mesh</item>
-              </items>
-              <chunks count="1">
-                <chunk name="Container">
-                  <items count="5">
-                    <item name="Description" type_name="gh_string" type_code="10">Delaunay triangulation</item>
-                    <item name="Hidden" type_name="gh_bool" type_code="1">true</item>
-                    <item name="InstanceGuid" type_name="gh_guid" type_code="9">48e62891-dfe6-4081-b3f0-43a270c6148b</item>
-                    <item name="Name" type_name="gh_string" type_code="10">Delaunay Mesh</item>
-                    <item name="NickName" type_name="gh_string" type_code="10">Del</item>
-                  </items>
-                  <chunks count="4">
-                    <chunk name="Attributes">
-                      <items count="2">
-                        <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
-                          <X>3828</X>
-                          <Y>938</Y>
-                          <W>60</W>
-                          <H>44</H>
-                        </item>
-                        <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                          <X>3857</X>
-                          <Y>960</Y>
-                        </item>
-                      </items>
-                    </chunk>
-                    <chunk name="param_input" index="0">
-                      <items count="8">
-                        <item name="Access" type_name="gh_int32" type_code="3">1</item>
-                        <item name="Description" type_name="gh_string" type_code="10">Points for triangulate</item>
-                        <item name="InstanceGuid" type_name="gh_guid" type_code="9">baad159c-81ca-4270-beb4-b0ab085124aa</item>
-                        <item name="Name" type_name="gh_string" type_code="10">Points</item>
-                        <item name="NickName" type_name="gh_string" type_code="10">P</item>
-                        <item name="Optional" type_name="gh_bool" type_code="1">false</item>
-                        <item name="Source" index="0" type_name="gh_guid" type_code="9">8f83c422-7712-413c-b6c8-db4a28e2fc37</item>
-                        <item name="SourceCount" type_name="gh_int32" type_code="3">1</item>
-                      </items>
-                      <chunks count="1">
-                        <chunk name="Attributes">
-                          <items count="2">
-                            <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
-                              <X>3830</X>
-                              <Y>940</Y>
-                              <W>12</W>
-                              <H>20</H>
-                            </item>
-                            <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                              <X>3837.5</X>
-                              <Y>950</Y>
-                            </item>
-                          </items>
-                        </chunk>
-                      </chunks>
-                    </chunk>
-                    <chunk name="param_input" index="1">
-                      <items count="6">
-                        <item name="Description" type_name="gh_string" type_code="10">Optional base plane. If no plane is provided, then the best-fit plane will be used.</item>
-                        <item name="InstanceGuid" type_name="gh_guid" type_code="9">4ed9e48b-b41d-48ed-b95e-432a647a6879</item>
-                        <item name="Name" type_name="gh_string" type_code="10">Plane</item>
-                        <item name="NickName" type_name="gh_string" type_code="10">Pl</item>
-                        <item name="Optional" type_name="gh_bool" type_code="1">true</item>
-                        <item name="SourceCount" type_name="gh_int32" type_code="3">0</item>
-                      </items>
-                      <chunks count="2">
-                        <chunk name="Attributes">
-                          <items count="2">
-                            <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
-                              <X>3830</X>
-                              <Y>960</Y>
-                              <W>12</W>
-                              <H>20</H>
-                            </item>
-                            <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                              <X>3837.5</X>
-                              <Y>970</Y>
-                            </item>
-                          </items>
-                        </chunk>
-                        <chunk name="PersistentData">
-                          <items count="1">
-                            <item name="Count" type_name="gh_int32" type_code="3">1</item>
-                          </items>
-                          <chunks count="1">
-                            <chunk name="Branch" index="0">
-                              <items count="2">
-                                <item name="Count" type_name="gh_int32" type_code="3">1</item>
-                                <item name="Path" type_name="gh_string" type_code="10">{0}</item>
-                              </items>
-                              <chunks count="1">
-                                <chunk name="Item" index="0">
-                                  <items count="1">
-                                    <item name="plane" type_name="gh_plane" type_code="72">
-                                      <Ox>0</Ox>
-                                      <Oy>0</Oy>
-                                      <Oz>0</Oz>
-                                      <Xx>1</Xx>
-                                      <Xy>0</Xy>
-                                      <Xz>0</Xz>
-                                      <Yx>0</Yx>
-                                      <Yy>1</Yy>
-                                      <Yz>0</Yz>
-                                    </item>
-                                  </items>
-                                </chunk>
-                              </chunks>
-                            </chunk>
-                          </chunks>
-                        </chunk>
-                      </chunks>
-                    </chunk>
-                    <chunk name="param_output" index="0">
-                      <items count="6">
-                        <item name="Description" type_name="gh_string" type_code="10">Mesh</item>
-                        <item name="InstanceGuid" type_name="gh_guid" type_code="9">bedb8466-3e44-432e-b8e6-4253f2a31a79</item>
-                        <item name="Name" type_name="gh_string" type_code="10">Mesh</item>
-                        <item name="NickName" type_name="gh_string" type_code="10">M</item>
-                        <item name="Optional" type_name="gh_bool" type_code="1">false</item>
-                        <item name="SourceCount" type_name="gh_int32" type_code="3">0</item>
-                      </items>
-                      <chunks count="1">
-                        <chunk name="Attributes">
-                          <items count="2">
-                            <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
-                              <X>3872</X>
-                              <Y>940</Y>
-                              <W>14</W>
-                              <H>40</H>
-                            </item>
-                            <item name="Pivot" type_name="gh_drawing_pointf" type_code="31">
-                              <X>3879</X>
-                              <Y>960</Y>
-                            </item>
-                          </items>
-                        </chunk>
-                      </chunks>
-                    </chunk>
-                  </chunks>
-                </chunk>
-              </chunks>
-            </chunk>
-            <chunk name="Object" index="64">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -11632,7 +11568,7 @@ Results are written in the same layout as Honeybee's Annual Daylight recipe, so 
               </items>
               <chunks count="1">
                 <chunk name="Container">
-                  <items count="14">
+                  <items count="13">
                     <item name="CodeInput" type_name="gh_string" type_code="10"># Ladybug: A Plugin for Environmental Analysis (GPL)
 # This file is part of Ladybug.
 #
@@ -11746,14 +11682,13 @@ Note that any brep can be converted to a gridded mesh that can be consumed by
 this component using the "LB Generate Point Grid" component.
 -</item>
                     <item name="EditorLocation" type_name="gh_drawing_point" type_code="30">
-                      <X>285</X>
-                      <Y>108</Y>
+                      <X>2075</X>
+                      <Y>30</Y>
                     </item>
                     <item name="EditorSize" type_name="gh_drawing_size" type_code="32">
                       <W>849</W>
-                      <H>1202</H>
+                      <H>1010</H>
                     </item>
-                    <item name="Hidden" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">true</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
@@ -11818,7 +11753,7 @@ in the mesh.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>840</Y>
@@ -11829,6 +11764,7 @@ in the mesh.</item>
                                   <X>4050.5</X>
                                   <Y>850</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -11844,13 +11780,13 @@ the number of input values and will be colored with results.</item>
                             <item name="Optional" type_name="gh_bool" type_code="1">true</item>
                             <item name="ScriptParamAccess" type_name="gh_int32" type_code="3">0</item>
                             <item name="ShowTypeHints" type_name="gh_bool" type_code="1">true</item>
-                            <item name="Source" index="0" type_name="gh_guid" type_code="9">bedb8466-3e44-432e-b8e6-4253f2a31a79</item>
+                            <item name="Source" index="0" type_name="gh_guid" type_code="9">f7b772c5-bf2a-487b-84ba-8208a1eb48bf</item>
                             <item name="SourceCount" type_name="gh_int32" type_code="3">1</item>
                             <item name="TypeHintID" type_name="gh_guid" type_code="9">794a1f9d-21d5-4379-b987-9e8bbf433912</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>860</Y>
@@ -11861,6 +11797,7 @@ the number of input values and will be colored with results.</item>
                                   <X>4050.5</X>
                                   <Y>870</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -11882,7 +11819,7 @@ values. Higher values will be offset further.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>880</Y>
@@ -11893,6 +11830,7 @@ values. Higher values will be offset further.</item>
                                   <X>4050.5</X>
                                   <Y>890</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -11913,7 +11851,7 @@ values. Higher values will be offset further.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>900</Y>
@@ -11924,6 +11862,7 @@ values. Higher values will be offset further.</item>
                                   <X>4050.5</X>
                                   <Y>910</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -11945,7 +11884,7 @@ Default is an empty string.</item>
                           </items>
                           <chunks count="2">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>920</Y>
@@ -11956,6 +11895,7 @@ Default is an empty string.</item>
                                   <X>4050.5</X>
                                   <Y>930</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                             <chunk name="PersistentData">
@@ -11999,7 +11939,7 @@ title.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4016</X>
                                   <Y>940</Y>
@@ -12010,6 +11950,7 @@ title.</item>
                                   <X>4050.5</X>
                                   <Y>950</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12025,7 +11966,7 @@ title.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>840</Y>
@@ -12036,6 +11977,7 @@ title.</item>
                                   <X>4142</X>
                                   <Y>850</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12051,7 +11993,7 @@ title.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>860</Y>
@@ -12062,6 +12004,7 @@ title.</item>
                                   <X>4142</X>
                                   <Y>870</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12077,7 +12020,7 @@ title.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>880</Y>
@@ -12088,6 +12031,7 @@ title.</item>
                                   <X>4142</X>
                                   <Y>890</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12103,7 +12047,7 @@ title.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>900</Y>
@@ -12114,6 +12058,7 @@ title.</item>
                                   <X>4142</X>
                                   <Y>910</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12130,7 +12075,7 @@ unset properties.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>920</Y>
@@ -12141,6 +12086,7 @@ unset properties.</item>
                                   <X>4142</X>
                                   <Y>930</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12156,7 +12102,7 @@ unset properties.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4112</X>
                                   <Y>940</Y>
@@ -12167,6 +12113,7 @@ unset properties.</item>
                                   <X>4142</X>
                                   <Y>950</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -12177,7 +12124,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="65">
+            <chunk name="Object" index="64">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9df5e896-552d-4c8c-b9ca-4fc147ffa022</item>
                 <item name="Name" type_name="gh_string" type_code="10">Expression</item>
@@ -12302,7 +12249,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="66">
+            <chunk name="Object" index="65">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9103c240-a6a9-4223-9b42-dbd19bf38e2b</item>
                 <item name="Name" type_name="gh_string" type_code="10">Unit Z</item>
@@ -12408,7 +12355,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="67">
+            <chunk name="Object" index="66">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">e9eb1dcf-92f6-4d4d-84ae-96222d60f56b</item>
                 <item name="Name" type_name="gh_string" type_code="10">Move</item>
@@ -12571,7 +12518,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="68">
+            <chunk name="Object" index="67">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">962034e9-cc27-4394-afc4-5c16e3447cf9</item>
                 <item name="Name" type_name="gh_string" type_code="10">Extrude</item>
@@ -12684,7 +12631,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="69">
+            <chunk name="Object" index="68">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">b648d933-ddea-4e75-834c-8f6f3793e311</item>
                 <item name="Name" type_name="gh_string" type_code="10">Cap Holes</item>
@@ -12770,7 +12717,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="70">
+            <chunk name="Object" index="69">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">758d91a0-4aec-47f8-9671-16739a8a2c5d</item>
                 <item name="Name" type_name="gh_string" type_code="10">Format</item>
@@ -12990,7 +12937,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="71">
+            <chunk name="Object" index="70">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9df5e896-552d-4c8c-b9ca-4fc147ffa022</item>
                 <item name="Name" type_name="gh_string" type_code="10">Expression</item>
@@ -13115,7 +13062,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="72">
+            <chunk name="Object" index="71">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">758d91a0-4aec-47f8-9671-16739a8a2c5d</item>
                 <item name="Name" type_name="gh_string" type_code="10">Format</item>
@@ -13336,7 +13283,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="73">
+            <chunk name="Object" index="72">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9df5e896-552d-4c8c-b9ca-4fc147ffa022</item>
                 <item name="Name" type_name="gh_string" type_code="10">Expression</item>
@@ -13460,7 +13407,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="74">
+            <chunk name="Object" index="73">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">03b801eb-87cd-476a-a591-257fe5d5bf0f</item>
                 <item name="Name" type_name="gh_string" type_code="10">Pick'n'Choose</item>
@@ -13643,7 +13590,7 @@ unset properties.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="75">
+            <chunk name="Object" index="74">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -14203,7 +14150,7 @@ simulations.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="76">
+            <chunk name="Object" index="75">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -14810,7 +14757,7 @@ the input parameters.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="77">
+            <chunk name="Object" index="76">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -15106,7 +15053,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="78">
+            <chunk name="Object" index="77">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">1817fd29-20ae-4503-b542-f0fb651e67d7</item>
                 <item name="Name" type_name="gh_string" type_code="10">List Length</item>
@@ -15193,7 +15140,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="79">
+            <chunk name="Object" index="78">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">e64c5fb1-845c-4ab1-8911-5f338516ba67</item>
                 <item name="Name" type_name="gh_string" type_code="10">Series</item>
@@ -15392,7 +15339,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="80">
+            <chunk name="Object" index="79">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9df5e896-552d-4c8c-b9ca-4fc147ffa022</item>
                 <item name="Name" type_name="gh_string" type_code="10">Expression</item>
@@ -15517,7 +15464,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="81">
+            <chunk name="Object" index="80">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">9df5e896-552d-4c8c-b9ca-4fc147ffa022</item>
                 <item name="Name" type_name="gh_string" type_code="10">Expression</item>
@@ -15641,7 +15588,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="82">
+            <chunk name="Object" index="81">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">d8332545-21b2-4716-96e3-8559a9876e17</item>
                 <item name="Name" type_name="gh_string" type_code="10">Dispatch</item>
@@ -15809,7 +15756,7 @@ of a Model and when it is simulated in EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="83">
+            <chunk name="Object" index="82">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -16225,7 +16172,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="84">
+            <chunk name="Object" index="83">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">50faccbd-9c92-4175-a5fa-d65e36013db6</item>
                 <item name="Name" type_name="gh_string" type_code="10">Weave</item>
@@ -16409,7 +16356,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="85">
+            <chunk name="Object" index="84">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">d8332545-21b2-4716-96e3-8559a9876e17</item>
                 <item name="Name" type_name="gh_string" type_code="10">Dispatch</item>
@@ -16577,7 +16524,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="86">
+            <chunk name="Object" index="85">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -16993,7 +16940,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="87">
+            <chunk name="Object" index="86">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">50faccbd-9c92-4175-a5fa-d65e36013db6</item>
                 <item name="Name" type_name="gh_string" type_code="10">Weave</item>
@@ -17177,7 +17124,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="88">
+            <chunk name="Object" index="87">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59daf374-bc21-4a5e-8282-5504fb7ae9ae</item>
                 <item name="Name" type_name="gh_string" type_code="10">List Item</item>
@@ -17482,7 +17429,7 @@ Rooms or Faces will be set to adiabatic.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="89">
+            <chunk name="Object" index="88">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -17936,7 +17883,7 @@ Opaque construction.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="90">
+            <chunk name="Object" index="89">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -18192,7 +18139,7 @@ Faces or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="91">
+            <chunk name="Object" index="90">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59daf374-bc21-4a5e-8282-5504fb7ae9ae</item>
                 <item name="Name" type_name="gh_string" type_code="10">List Item</item>
@@ -18497,7 +18444,7 @@ Faces or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="92">
+            <chunk name="Object" index="91">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -18951,7 +18898,7 @@ Opaque construction.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="93">
+            <chunk name="Object" index="92">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -19207,7 +19154,7 @@ Faces or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="94">
+            <chunk name="Object" index="93">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59daf374-bc21-4a5e-8282-5504fb7ae9ae</item>
                 <item name="Name" type_name="gh_string" type_code="10">List Item</item>
@@ -19512,7 +19459,7 @@ Faces or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="95">
+            <chunk name="Object" index="94">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -19966,7 +19913,7 @@ Opaque construction.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="96">
+            <chunk name="Object" index="95">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -20222,7 +20169,7 @@ Faces or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="97">
+            <chunk name="Object" index="96">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -20555,7 +20502,7 @@ construction.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="98">
+            <chunk name="Object" index="97">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -20846,7 +20793,7 @@ Apertures or ConstructionSets.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="99">
+            <chunk name="Object" index="98">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -21102,7 +21049,7 @@ or create a ConstructionSet object.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="100">
+            <chunk name="Object" index="99">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -21250,7 +21197,7 @@ ConstructionSet object.
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">true</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
-                      <bitmap length="1056">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADiNXWtAAADiklEQVRIDdVV3W4aVxD+dtk/YAmWQTKSLbAN9V+LZVVy4+ail8kb5CpKXiDqG/guTxCp8gPkqmqVWHmA3le5seOS1ipgoJIDNk4M7q6XZZftzLrg49pJIyc3GRg4P3Nmznzzc4DPnSTBASOVSm0uLy+nisViq1KpjNm2rcfjcXdqaqq7u7ubZtmFhYVDovjR0VFM0zR/cXHxcHt7O8N7JNdxHCfSbDZN13X7W1tb93l9SPr6+not+ET0bHMzUBRlVR5qp3+l1WpFhPlHDQ8PDuB5XlIRtMjlcll/uVNCr9cLl33fR9eXEEgiksAgAOiLCC17AxoEAVJqgEjk7H5GNIrqXo11BKIBP5fLnRbysxgM+BTwqvQ7HvwZRdtIQ4IfrrFClfxOqBKO7AFUVUEBx/hh6hirXy6FMrIs4+Y3qw7Fryka8LLZ7EksFg2F+IfHPS0GTzNpRgbopklSfDer4Wmjj+kU8Py7BJ78BriSA9OMj842Gg3dsqxxMQb6zs7OxEiCBhRvKCEY7FGIBfRIgB9rDm6NS9i+beLnv1w8Lp/iAtgkres646qJHtD8f4iOHFgDPCpG8X1Bx71fbTyvezApRuJNWQvBzJjaooHeyspKkxbDfGehS0SRjesyxjQJX/9ygvIb0mEokJ1LkpicnPRVVT0VDUQoTRnsdxN5YPkBHr6wKYVILEThavH9/X2t3++nRQMKVed5lK4+d7ZKHnwoiQa8RCJxwVnOayu8qkr6/ovy0ATLEEz/1sBwNZPJOATReZqura1Fk8l0b6/WgO97oVyTqvFmX0dX+pvmXFpXkYRo30L70EK5Ug0FVFVDtbrHEN0YefD6dVcrl/+Y4KKV6MM0OzODn74IIFG6vo8CycQJVbzvnRWjREos22aXoyMD9fqrk1vfLjvTuWzifcretUc1d4HyszNcOI4IrJebnn5zQeojJrFYzKUYdEQDMjU5juYnoYNWy6AYTIwgIq0KPTIJy7KpW7J31ydudvZpmJCSaCDw/YHPbXbYrq9rwjAMSLLMELVFA+6dO7fbxa+WMtdVLJ6r7VU0apbnWUSbysbGRqper2Nubq5DcCX5wTFNs5dOp91arRZmV6FQ6JZKJZO6pUwYe/Pz83a1Wr3ByvP5fLfdbhudTkej95hftEvNZJbkDOK3xEliTgIGk584njMdE3PPYu/7xBbxGDET7/GDohNz8VT/AWc5nKskDIcoAAAAAElFTkSuQmCC</bitmap>
+                      <bitmap length="1066">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADB/VeXAAADoElEQVRIDdVVW09jVRT+zmnPDcq0aUloQOoMIg8DLcRkIvGWNAEfeDZGkxlnfDf+A958mCceTPwFPhmNkv4AgZAQJ6YJilVGW6itEKRQS9vTy+k5Pa51GGCT6WDCzIsrXT37svZae33rsoH/O0mCA/rw8PDy7OxsZGFh4e+NjY1QpVLRQqGQNT09XV1bWxtk2WQyWcpms/3FYrHPMAxnfn6+lEqlorw3NTV1UqvVfLQfsCyrUyqVPuL1M9KWlpby7gui75aX3Ugkckc+005f/97enk+YP9ewdHiI4+PjoF/QImcyGe3nrQza7ba37DgOqo4EVxKRBLouQD/4aNnu0sB1EVFc+Hyn99MNAzu7edbhigaciYmJ5vgrY+h2+RTwa+Y33P/DwJE+CAmOt8YKFfJ7QJFw3OhCUfwYRwVfvFTBncnbnowsy3j7rTdbj5LJA9GAPTk5WevrMzwh/uNxW+2DrQZoRgbopkFS/H5MxbeFDm5GgNQ7A/jyF8CSWggE+s/P5nI5bWVlJSzGQFtdXR06l6ABxRt+Dwz2yMMCms/FV/kW3ghL+OndAL4pWvg828QlsElaVVXGVRU9oPl/EB05NLv4LG7g03ENdx81kPrTRoBiJN70iRbGtCEaaM/NzR3QopfvPU1RZPs1GSG63Gvf15Atkw7dD7n1tPTo6KgzMjLSFA34CDcG+9lEHpiOi09+bFAKkZjGKPSmQqGgUtoPigb8+/v7F1Hqfe501YP3KoGLPdGAHQ6HLznLeW16V1XoRA+UPT0sQzA9qYEz1bFYrEUwXaQpZYzx8OFSezdfgOPYntwBVePrHQ1VqU5zLq1eJMHomDgqmcjmdjwBRVHx+PHvKvWrG6IHajr9w9AHH75HRXWK7ditW/j6VRcSpetV5EoB1KjiHfu0GCXKqrppssvGuQFarH384EHr5suxgauUPWuPau4SUUfgwmmJwNrxRKJ8Seo5JsFg0KIYnIgG5Hq9ztF8IfRXsahTDIbOISKt/q2trQHTbFC3ZO+uT9zsGk0vISXRgNvtug632bN2fV0Tuq7Dr6gWVfKRaMC6d+/uUXzqdvS6isVz+d2c2mw2L7KINv2Li4uR9fV1zMzMnBBcQX5w6E1uR6NRa3t728uueDxeTafTAeqWMu3biUSiQQ/VDVZOb3KVuoFeLpfVzc1N0PepZjJGcjrxP8RBYk4CBpOfOJ4zVYi5Z7H3HWKTOETMxHv8oGjEXDw7/wJhgJpA1Ft5FwAAAABJRU5ErkJggg==</bitmap>
                     </item>
                     <item name="InputIsPath" type_name="gh_bool" type_code="1">false</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">c27b3890-e3a3-413a-b034-fe1f76047fcd</item>
@@ -21510,7 +21457,7 @@ or create a ConstructionSet object.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="101">
+            <chunk name="Object" index="100">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -21907,7 +21854,7 @@ to edit or create a ConstructionSet object.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="102">
+            <chunk name="Object" index="101">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -22355,7 +22302,7 @@ Rooms in order to specify all default constructions on the Room.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="103">
+            <chunk name="Object" index="102">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -22582,7 +22529,7 @@ construction set library.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="104">
+            <chunk name="Object" index="103">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -22889,7 +22836,7 @@ that they are determined by the input program. (Default: False).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="105">
+            <chunk name="Object" index="104">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -23416,7 +23363,7 @@ as the setpoint is reached. (Default: 0).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="106">
+            <chunk name="Object" index="105">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">eeafc956-268e-461d-8e73-ee05c6f72c01</item>
                 <item name="Name" type_name="gh_string" type_code="10">Stream Filter</item>
@@ -23594,7 +23541,7 @@ as the setpoint is reached. (Default: 0).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="107">
+            <chunk name="Object" index="106">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -24311,7 +24258,7 @@ library (Default: None).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="108">
+            <chunk name="Object" index="107">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -24726,7 +24673,7 @@ types of EnergyPlus calculations to run.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="109">
+            <chunk name="Object" index="108">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -25183,7 +25130,7 @@ for the EnergyPlus Shadow Calculation.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="110">
+            <chunk name="Object" index="109">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -25739,7 +25686,7 @@ types of outputs should be written from EnergyPlus.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="111">
+            <chunk name="Object" index="110">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -26374,7 +26321,7 @@ simulation settings</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="112">
+            <chunk name="Object" index="111">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">2e78987b-9dfb-42a2-8b76-3923ac8bd91a</item>
                 <item name="Name" type_name="gh_string" type_code="10">Boolean Toggle</item>
@@ -26405,7 +26352,7 @@ simulation settings</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="113">
+            <chunk name="Object" index="112">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -26755,7 +26702,7 @@ to an IDF file and then run through EnergyPlus.
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">false</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
-                      <bitmap length="1600">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</bitmap>
+                      <bitmap length="1526">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADB/VeXAAAFbElEQVRIDc1VWWxUVRj+zt3m3pm5M3c605bS0jIWWihUsBRFQECiRBLTBGKiJj4QHiTRRNQnfFFfiIkmhvgIcXuSmKDxQXFHWQpqAFtLoZ0C0w063Wbf7+J/77S1EB4w8cE/c+Ys95zv+8/3/+cc4H9mbsuywuRT6H79YveYaI/VENAyqpuptMCYaYn0X18xOjzZOB6P1/i9nkzzsmB0zcoVQ/DX99Ocq1QijLFhqqepLJhDQGAPmKb5CmeWWn4991s4EhmqL7k01ZI8iBeB2xkDoykdo2kTU3nAI1ho8nFYrgloUHlUyQysmIEHucTatrbRzs7OSKFg/qEo/PvCHNXDVwYiB7P5EnwuDvl8AT8MxdA9JWKm5AHkAKAGIUk8JJeBWXAYTNDK0QyQm0VAymB7rY7dYVGTBU67/NfV9uj1wb0049g8wdiZCxfx8ndxrKoP4pG6GjzeYuLZB03kyyYiyVlcmo6jL8FjoihC5Q1s0kxsbGNYE+CgCm7EkjmcvpnE4W+PQ2E6Pti3c4wIMvMEMzJnILikATfEGlwbywFDWVTxBazyAx0hE3uWW9gn6chwMhTo0PNZDMZS+PxqAn23M5jO6hBkN5ik4tE6FzTNlyaCokNw4ABLbNnyaV4VDKVglaEoIgkdQplxuFgqoztKwpcL8Jem8HGXDx9934+TkRQgSHDxPGTFh9q6EIxcBpkUxcLlhsfjsgngEBw9iuQzu30Jv2QpMYuGkiOwZobB3BrkUDNkjwxYMpIphpGpJAXagttfBbGcg9IYhmf1OjBRRPrSBUq4OLyyCJ/fTx6AolWxnBpQ4ppbhJGcgHHtp8poIQ1z8BSQnaWZPHhLB89x4Cn3rFIB8rIwvGs7kLrYjemTJ1CavA2LdqTKEuqqq+00WCBAUPPOaooAfWIALNAA1rIDrHkLuKXtMG90k0QUF5KsYpZTqe2dyPRdQn74OizDoO8Mlmk6OxDUYNye5EhkNxqqa6cDchZmMQ8WWgIYZUCnQxBsAkuRZ+O9YMHV9tSKERjop67fBEELwsimURiLwjR0uCmdyRyCeZegLK2NBWTqcsRp6vTdOYMOCQuGYaWnaBcUbGfcBmdInP8F5ZkYpJol0DbvhG/DFpKuBEV0YB2JFnZAvkxSFgHealjZCYKpyACLaslNopuwillywGV7ByaI0Ol8xM/+CLNUhNq+Ae7WduK1iMCBvTMGtCamciRLgK4gvQQkxgFRcTwl9IpkDvTcn01sFzJOpHRd2oh8dAgcjdFptofv3gFibjpsPC+Ca9oIM3oBjLxmWj2s2CBhGWAuL4FSXGwjIBuU9/ogNzTByKSR7e+hq0SC6ISgEoNFEmHW72Iw0nGUGlohhUkkCqw59icsSlcuvMk5WNSpeE4xkJuaKWQicoNXUBi9CV2QUSgU6KA5sKTnoiyi9g2/kY8feSoUePfsAG7xdfC1PgkuS8HlJbrwVFhxattmZxBZ8vypSnoSSapsIWQm8OYL2+gcCLY8I/YcRyy7QXd5tGdo6KGDz2395NguL15akURpZgRpgW5SF92olH53m619kZeRTqfw/PoafPjiTry+v+szxvEdc2/DfC7euZTeh22Jkf7Dp3qGtx67nMbJMQGuQC10StUjnTkcPzeAy0kJeZKzo07Ba0934rG25r7GtrWHCPjrxWiLY7AwTpNOU+cxItq/PHjmrT3jmcYjv4+hP2WCwo5krgghn8HbXeuwo1XLbXui6x1a8x6tmcuABah77+Cfz05LI6JDP3914tVvomXXyioe0VuT2LiqCXt3bf8SivoGgQ/ctebfd4lkTXbi5he9PT3WQG9vhPr2i/Xf2/j4+GZCpWfo/uxvjfUtl/f9UpYAAAAASUVORK5CYII=</bitmap>
                     </item>
                     <item name="InputIsPath" type_name="gh_bool" type_code="1">false</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">214dbec7-287b-486f-9245-a94484388c17</item>
@@ -27327,7 +27274,7 @@ can be requested.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="114">
+            <chunk name="Object" index="113">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -27376,7 +27323,7 @@ can be requested.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="115">
+            <chunk name="Object" index="114">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -27740,7 +27687,7 @@ will be in m2 if ip_ is False or None and ft2 if True.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="116">
+            <chunk name="Object" index="115">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -28488,7 +28435,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="117">
+            <chunk name="Object" index="116">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -28536,7 +28483,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="118">
+            <chunk name="Object" index="117">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -28585,7 +28532,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="119">
+            <chunk name="Object" index="118">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -28634,7 +28581,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="120">
+            <chunk name="Object" index="119">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -28683,7 +28630,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="121">
+            <chunk name="Object" index="120">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -28732,7 +28679,7 @@ the HVAC System (kWh).</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="122">
+            <chunk name="Object" index="121">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -29033,7 +28980,7 @@ area (or have a multiplier) and therefore get a greater weighting.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="123">
+            <chunk name="Object" index="122">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -29359,7 +29306,7 @@ _data and _operation_.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="124">
+            <chunk name="Object" index="123">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -29548,7 +29495,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="125">
+            <chunk name="Object" index="124">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">5b850221-b527-4bd6-8c62-e94168cd6efa</item>
                 <item name="Name" type_name="gh_string" type_code="10">Mass Addition</item>
@@ -29662,7 +29609,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="126">
+            <chunk name="Object" index="125">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">ce46b74e-00c9-43c4-805a-193b69ea4a11</item>
                 <item name="Name" type_name="gh_string" type_code="10">Multiplication</item>
@@ -29786,7 +29733,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="127">
+            <chunk name="Object" index="126">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -29835,7 +29782,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="128">
+            <chunk name="Object" index="127">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -29884,7 +29831,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="129">
+            <chunk name="Object" index="128">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -29933,7 +29880,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="130">
+            <chunk name="Object" index="129">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -30234,7 +30181,7 @@ area (or have a multiplier) and therefore get a greater weighting.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="131">
+            <chunk name="Object" index="130">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -30560,7 +30507,7 @@ _data and _operation_.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="132">
+            <chunk name="Object" index="131">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -30749,7 +30696,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="133">
+            <chunk name="Object" index="132">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">5b850221-b527-4bd6-8c62-e94168cd6efa</item>
                 <item name="Name" type_name="gh_string" type_code="10">Mass Addition</item>
@@ -30863,7 +30810,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="134">
+            <chunk name="Object" index="133">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">ce46b74e-00c9-43c4-805a-193b69ea4a11</item>
                 <item name="Name" type_name="gh_string" type_code="10">Multiplication</item>
@@ -30987,7 +30934,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="135">
+            <chunk name="Object" index="134">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -31036,7 +30983,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="136">
+            <chunk name="Object" index="135">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -31085,7 +31032,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="137">
+            <chunk name="Object" index="136">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -31134,7 +31081,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="138">
+            <chunk name="Object" index="137">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">2e78987b-9dfb-42a2-8b76-3923ac8bd91a</item>
                 <item name="Name" type_name="gh_string" type_code="10">Boolean Toggle</item>
@@ -31165,7 +31112,7 @@ if all_required_inputs(ghenv.Component):
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="139">
+            <chunk name="Object" index="138">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -31615,7 +31562,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="140">
+            <chunk name="Object" index="139">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -31668,7 +31615,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="141">
+            <chunk name="Object" index="140">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31710,7 +31657,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="142">
+            <chunk name="Object" index="141">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31755,7 +31702,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="143">
+            <chunk name="Object" index="142">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31786,14 +31733,14 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="144">
+            <chunk name="Object" index="143">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
               </items>
               <chunks count="1">
                 <chunk name="Container">
-                  <items count="29">
+                  <items count="43">
                     <item name="Border" type_name="gh_int32" type_code="3">1</item>
                     <item name="Colour" type_name="gh_drawing_color" type_code="36">
                       <ARGB>120;255;245;160</ARGB>
@@ -31821,7 +31768,21 @@ file size and unnecessary duplication.</item>
                     <item name="ID" index="19" type_name="gh_guid" type_code="9">94905a96-d4db-4e51-a7a5-bc13f3f388fd</item>
                     <item name="ID" index="20" type_name="gh_guid" type_code="9">024c010f-0241-446b-812b-f5150ca8d834</item>
                     <item name="ID" index="21" type_name="gh_guid" type_code="9">01d61033-5e1f-4645-90e9-5980d2a480f0</item>
-                    <item name="ID_Count" type_name="gh_int32" type_code="3">22</item>
+                    <item name="ID" index="22" type_name="gh_guid" type_code="9">c39ebcc8-26bf-47f7-bb77-987bff74e269</item>
+                    <item name="ID" index="23" type_name="gh_guid" type_code="9">8e845b43-b355-485e-a8a3-b1af399525a7</item>
+                    <item name="ID" index="24" type_name="gh_guid" type_code="9">ac274b43-aa16-4395-aade-12ed13981997</item>
+                    <item name="ID" index="25" type_name="gh_guid" type_code="9">a4bff47a-1a99-4c66-bdcb-9da3ed4795dd</item>
+                    <item name="ID" index="26" type_name="gh_guid" type_code="9">28699fd1-199c-4a33-ac6f-b09e2949f18a</item>
+                    <item name="ID" index="27" type_name="gh_guid" type_code="9">a3a7f757-994a-4211-a9c8-4065deaa077c</item>
+                    <item name="ID" index="28" type_name="gh_guid" type_code="9">fd0612d2-7b0f-4720-87f3-36fb8fb7393f</item>
+                    <item name="ID" index="29" type_name="gh_guid" type_code="9">a93e8fd4-1336-413a-82e7-88b2e916e34b</item>
+                    <item name="ID" index="30" type_name="gh_guid" type_code="9">d345006b-eb4d-432c-9a71-61046e74d017</item>
+                    <item name="ID" index="31" type_name="gh_guid" type_code="9">359a62c1-10c8-48a9-a348-794c55c5af8d</item>
+                    <item name="ID" index="32" type_name="gh_guid" type_code="9">a0cb45e8-40e0-4ec2-9dd4-78bbf9b9268c</item>
+                    <item name="ID" index="33" type_name="gh_guid" type_code="9">4887736f-6ddb-46c8-a115-50f5bbc04870</item>
+                    <item name="ID" index="34" type_name="gh_guid" type_code="9">be35f9a7-39bb-4b16-b3c6-64dc903ab133</item>
+                    <item name="ID" index="35" type_name="gh_guid" type_code="9">64e3e5cb-fa49-42a8-8ff3-4ddc2dcffc06</item>
+                    <item name="ID_Count" type_name="gh_int32" type_code="3">36</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">da12429c-4b45-4c24-9f4a-318e59de1391</item>
                     <item name="Name" type_name="gh_string" type_code="10">Group</item>
                     <item name="NickName" type_name="gh_string" type_code="10">Daylight run (Foton)</item>
@@ -31832,7 +31793,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="145">
+            <chunk name="Object" index="144">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31881,7 +31842,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="146">
+            <chunk name="Object" index="145">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31910,7 +31871,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="147">
+            <chunk name="Object" index="146">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31970,7 +31931,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="148">
+            <chunk name="Object" index="147">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -31999,7 +31960,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="149">
+            <chunk name="Object" index="148">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32039,7 +32000,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="150">
+            <chunk name="Object" index="149">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32069,7 +32030,7 @@ file size and unnecessary duplication.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="151">
+            <chunk name="Object" index="150">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -32363,7 +32324,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="152">
+            <chunk name="Object" index="151">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">2e78987b-9dfb-42a2-8b76-3923ac8bd91a</item>
                 <item name="Name" type_name="gh_string" type_code="10">Boolean Toggle</item>
@@ -32394,7 +32355,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="153">
+            <chunk name="Object" index="152">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32419,7 +32380,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="154">
+            <chunk name="Object" index="153">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32444,7 +32405,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="155">
+            <chunk name="Object" index="154">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32469,7 +32430,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="156">
+            <chunk name="Object" index="155">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32494,7 +32455,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="157">
+            <chunk name="Object" index="156">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">c552a431-af5b-46a9-a8a4-0fcbc27ef596</item>
                 <item name="Name" type_name="gh_string" type_code="10">Group</item>
@@ -32535,7 +32496,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="158">
+            <chunk name="Object" index="157">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32583,7 +32544,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="159">
+            <chunk name="Object" index="158">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32631,7 +32592,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="160">
+            <chunk name="Object" index="159">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32679,7 +32640,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="161">
+            <chunk name="Object" index="160">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32731,7 +32692,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="162">
+            <chunk name="Object" index="161">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32783,7 +32744,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="163">
+            <chunk name="Object" index="162">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32835,7 +32796,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="164">
+            <chunk name="Object" index="163">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32883,7 +32844,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="165">
+            <chunk name="Object" index="164">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32935,7 +32896,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="166">
+            <chunk name="Object" index="165">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -32983,7 +32944,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="167">
+            <chunk name="Object" index="166">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -33031,7 +32992,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="168">
+            <chunk name="Object" index="167">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -33079,7 +33040,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="169">
+            <chunk name="Object" index="168">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59e0b89a-e487-49f8-bab8-b5bab16be14c</item>
                 <item name="Name" type_name="gh_string" type_code="10">Panel</item>
@@ -33137,7 +33098,7 @@ Requires Rhino 8, Ladybug Tools 1.8+, Foton 0.3.6 (Package Manager), OpenStudio 
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="170">
+            <chunk name="Object" index="169">
               <items count="3">
                 <item name="GUID" type_name="gh_guid" type_code="9">410755b1-224a-4c1e-a407-bf32fb45ea7e</item>
                 <item name="Lib" type_name="gh_guid" type_code="9">00000000-0000-0000-0000-000000000000</item>
@@ -33390,7 +33351,7 @@ if all_required_inputs(ghenv.Component):
                     <item name="HideInput" type_name="gh_bool" type_code="1">true</item>
                     <item name="HideOutput" type_name="gh_bool" type_code="1">true</item>
                     <item name="IconOverride" type_name="gh_drawing_bitmap" type_code="37">
-                      <bitmap length="1303">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADiNXWtAAAEgUlEQVRIDdVVzW8bVRCf97Fee9frz9ixkzYfCpQoCqQ0SDmAlFuROKBy6IVj/4SKM0fE38AR8Tc0ggtXKtQiVUqpkDEpiR03jp2unfWud9++xzw7de2k5caBkWd3dnZmfjOzM88A/3diswVk8wDDDOpSyAK5gJxGJsgJ5Nzdu3eDdhvsQcXJQT5vw86OAM5zkMk4sLRkwPo6AMsWrtmG7PV6QjuOqFQqpd9byv/28bv2fECoXK+a7f2GP68UwFIh4XKg8GvNy/70uHOv6vA7VSk/147FKHrRN4xCCGCYSvm2Ul6H0rm/gH1XPzz4io/DA7Tbbf7lJ5Xyt/fXHPB08iQLgNHxB4Q4kKTw7NkAHuz3+paQ5dtCOEpKUPpdgOHH5DAsNsCorsH6ddRNAFBWHpAIzgV4I4ALl4ubFTNodSIV+HESHIgC7aBZlzhFDLU+Pg9B6TZj3a8p+GAhfYzZvtZMSVodKUlCL05WAA6mM5syG4m6/mDUgVkAs97yS5jSZfvJs8EIMJPIEyAL8UR7VdBZYwK6yJkKaBAq46r5WCNjBXZaylwxeRrK2HpbGlpvYJsyClrac7pF0Vye90cDOY45c6WYvesS2mkOKhlKT6cdpw11g0MM0iWwrPXTrZRzDgvAYmBjthMgiTJFNxv1OElIRI8ijiR+E22GFySJkpZ1wBDfEUJGsScA2WzW3HvSX9h+2IvCoYR+IAyKgRcdGByfg2UYFJ7WesK0aPOQ0hv1hAEsjlWApSkMnJRSCYyKYwtDhsNK1N8aeDIyu7u7/Pf9P77x/LDEGHUjlexHfn/dsVgzJNbZ0PdXkwlgq1Xr6+4gvnkmzt6hEHUCYpqcgMNldBoTakaKEouybJk639cajaMJAIJltre3n97c+nAxjMKoUpk/bZ+clGMJrLpQabkv3Vy/16OPHj/8FKLUvdXqrdsylqxoVVvnwUluKEUyxRODlDl33vXqxVrj0Q8zm6xbt7m5eby59f6i7/sGbmm1UCzqKkFKWSmVS9A8aohOpyFXyx9Vdpa/GB0jSsm5kdHFhWHrI3kLznottw4HMx+ZYob2MAggHA6nfUYythcGnscHbrAG8+API2+0MggwY8soh0D0wBu6jn4xPW1mt9O5dnn1X3mP9USCwVpF+3qTU1yZNy4lgVgJrMK/AhBmc7nW244KDWDZligvFprt3vMVISMckelP+CoVPdUMOEsOLlcgcvn8qW7Fm4hSCv5gkDg5bG/h+GJfxvN/2Va3jNMEpJOF9mWAVK1W29BH8L+RjEHYiXyXjvboKgghFMLYh5dec1nHmSwayiqVSlFkvYVXMDjn4GSycu56/gkh7DOTWxDF2KYL0plrP529UD7KuG1I0wDnRMq9Hx/s3eFSiurqSq1xeHQjCAK6vLpSd10373bPsrFP105IbenP01+AEROCqDeCMHkahAyxcRLvGoA81y8up2qhTs+1Po31aVhF1pP2AtlGTm9sbHT7/e76edAuEkrOoliUUI/DxduxEGlsYYpzpuxk9eejoyP93/Pf0j9GuPTKEKTa4QAAAABJRU5ErkJggg==</bitmap>
+                      <bitmap length="1350">iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAGKADAAQAAAABAAAAGAAAAADB/VeXAAAEvElEQVRIDdVVTWwbRRR+O7vr3fVPnNj5sZ04ceIQkkCaBIpKKggtQpQLUA7tBU7lwqUnQNw4cOBSiV6AA9wqxJUTCm2EIiyCQKEKBamhSXF+lMZO/B/b2bV3d4Y3LnHtxOHGgSe9ndk3b9735ps3MwD/dxGaF7DZATAgo42i7qN6UbnPASoXJ2Msg62GRmfNAlDA1o0qolZRDdQ2BlAUBEGvA+BE94XnJpbPDKk9FULo2ZG2VGwl38PQcyzkLEhAYOGPvHc1N3TFXYlflHO51zAQhG17NyWKPowqI6KOGZa3ATr17t4vYks/vSdxJy6IJr1/ear7o6sRD5QtbvG+fhYTQwAc9IBKYGZcgzfnB4uOpZXu80bVwygFhmNRZvIQXDwiLjgiifBAcRRjaKgDYJ/phJhQsqBcA+D+j8Rpi7CbNdnmakoNSmByHjg2rvyRE/ZEtOrYpq2qxgcI//wjxktjnQnM9vC/qeXmKqVCZi2rzmjaRmNmTY74w9e/Z1p8/5oAlKXVfBemxO0tRRYF0Lpk+qtRDdktPR4aedYuIvJFNgGQskF5BbUUajPwIOsvXn42XTIrzpPS4HYZaZrQ3EkeqJEiMxxQirWibAFBMPtcHsi3ny4EwqqabpzY6M4JrmKQX8qFAW5vpJKG/Q4DnCK4MNs6EMU+wWkutGMl4bYKIUEoK0ilWXPDDwrFCQJmzgNWazQLtdh1gFwup7z1xvOhcI9sVisUcmVTJhg46hcP1rO2U5YJ/BkvWn2nzuz8kN4cmXDIINo2M3BpDAOrlDILax3LFiqiCB1e1xYHrpcMlps0PjL58W4m36UoSqEC/mIpszEa8Gs7hhzM5dM7gx6Niel07MNLl96disVjw5qmZ1KsXVEs29MmG2mdSUrJlgS/LXq3YvduCE7ndh0AwdpmZmbujo890WvZlhmNDqXX4/Fuy2biYyPDyWQi2b5fKJAXzk1euPHlrSs+19DLtmWLEf9Ycq8Qbz+wDLVNcR143f2l7eyyv6Cvf9V0kjl1s7OziUAo1KvruoynNDgyOspXCZTSwGB0EJI7CWtu7nPqlqYDU8FXatcIY7SzQ43U/PhHROp9wV4osDsFBGjaZJLa23N1+HxQrVTqEw47SC+UikXp5/n16FPTz+gVs1w7Mghw6FJrRSKBYe3DVv6ehxsaq03Z3NjoO3r0D2dzuyAQqnU7k6fC53Ykgkem5aEUwGYW5PW9YwDVYCiUPOmq4ABuj9u69vU7O7f/mo9YFC+4E64VIojg1vy1K75xBVb/wECaU9FKCCGcIsfVVz+ZlESCvDys/6O+nDKJOODx8OkUH2sE0BYXF8f5FfxvYhlgBduHs6R2jo6DII1QtXW4vXpz4CgA0zSNoIKqqsfU4XBAm7edXpt7+3d8OgRFcoIsauDAlqssqthqwO1cBcBHAaV+krFfivT1zc1/d/OizJj15Omn799Z/m3EMAwyOT0VTyQSHankrndtrRJNbt3trwQolqQChslfVsCgbrBoFYmj2Org6/BtcvtRwvk724nKb2N+GwZROY27qC5UN2529vr1D0a/+f4zf2BIza2sZLrQDmNj/tSD+xn3fgY0r9fJfrxVXsD95G/Pfyt/A0aO6cw9/pLgAAAAAElFTkSuQmCC</bitmap>
                     </item>
                     <item name="InputIsPath" type_name="gh_bool" type_code="1">false</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">01d61033-5e1f-4645-90e9-5980d2a480f0</item>
@@ -33453,7 +33414,7 @@ previewed in the Rhino scene based on type.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4269</X>
                                   <Y>1040</Y>
@@ -33464,6 +33425,7 @@ previewed in the Rhino scene based on type.</item>
                                   <X>4293.5</X>
                                   <Y>1180</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33480,7 +33442,7 @@ condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1040</Y>
@@ -33491,6 +33453,7 @@ condition.</item>
                                   <X>4391</X>
                                   <Y>1050</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33507,7 +33470,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1060</Y>
@@ -33518,6 +33481,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1070</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33534,7 +33498,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1080</Y>
@@ -33545,6 +33509,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1090</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33561,7 +33526,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1100</Y>
@@ -33572,6 +33537,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1110</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33588,7 +33554,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1120</Y>
@@ -33599,6 +33565,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1130</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33615,7 +33582,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1140</Y>
@@ -33626,6 +33593,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1150</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33641,7 +33609,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1160</Y>
@@ -33652,6 +33620,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1170</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33667,7 +33636,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1180</Y>
@@ -33678,6 +33647,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1190</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33694,7 +33664,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1200</Y>
@@ -33705,6 +33675,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1210</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33720,7 +33691,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1220</Y>
@@ -33731,6 +33702,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1230</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33746,7 +33718,7 @@ boundary condition.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1240</Y>
@@ -33757,6 +33729,7 @@ boundary condition.</item>
                                   <X>4391</X>
                                   <Y>1250</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33774,7 +33747,7 @@ of a model.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1260</Y>
@@ -33785,6 +33758,7 @@ of a model.</item>
                                   <X>4391</X>
                                   <Y>1270</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33801,7 +33775,7 @@ of their parent objects.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1280</Y>
@@ -33812,6 +33786,7 @@ of their parent objects.</item>
                                   <X>4391</X>
                                   <Y>1290</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33827,7 +33802,7 @@ of their parent objects.</item>
                           </items>
                           <chunks count="1">
                             <chunk name="Attributes">
-                              <items count="2">
+                              <items count="3">
                                 <item name="Bounds" type_name="gh_drawing_rectanglef" type_code="35">
                                   <X>4345</X>
                                   <Y>1300</Y>
@@ -33838,6 +33813,7 @@ of their parent objects.</item>
                                   <X>4391</X>
                                   <Y>1310</Y>
                                 </item>
+                                <item name="Selected" type_name="gh_bool" type_code="1">true</item>
                               </items>
                             </chunk>
                           </chunks>
@@ -33848,16 +33824,17 @@ of their parent objects.</item>
                 </chunk>
               </chunks>
             </chunk>
-            <chunk name="Object" index="171">
+            <chunk name="Object" index="170">
               <items count="2">
                 <item name="GUID" type_name="gh_guid" type_code="9">59daf374-bc21-4a5e-8282-5504fb7ae9ae</item>
                 <item name="Name" type_name="gh_string" type_code="10">List Item</item>
               </items>
               <chunks count="1">
                 <chunk name="Container">
-                  <items count="5">
+                  <items count="6">
                     <item name="BaseOutputIndex" type_name="gh_int32" type_code="3">0</item>
                     <item name="Description" type_name="gh_string" type_code="10">Retrieve a specific item from a list.</item>
+                    <item name="Hidden" type_name="gh_bool" type_code="1">true</item>
                     <item name="InstanceGuid" type_name="gh_guid" type_code="9">3889d695-9186-4b33-930e-b9240db60b8d</item>
                     <item name="Name" type_name="gh_string" type_code="10">List Item</item>
                     <item name="NickName" type_name="gh_string" type_code="10">Item</item>
