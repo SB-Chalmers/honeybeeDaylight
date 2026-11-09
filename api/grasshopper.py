@@ -20,15 +20,20 @@ FOLDER = Path(__file__).resolve().parent.parent / 'grasshopper'
 TEMPLATE = FOLDER / 'heath.ghx'
 COMPONENTS = {'Heath Request': 'heath_request.py', 'Heath Sensors': 'heath_sensors.py'}
 
+def _wwr(room: dict, direction: str) -> float:
+    """Window ratio for one direction: wwr_by_cardinal if given, else the single wwr."""
+    return (room.get('wwr_by_cardinal') or {}).get(direction, room.get('wwr'))
+
+
 # Slider nickname -> how to read its value from the room dict.
 SLIDERS = {
     '_floors_': lambda r: r['floors'],
     '_floor_': lambda r: r['selected_floor_number'],
     '_orientation_': lambda r: r['orientation_offset'],
-    'wwr_north_': lambda r: r['wwr_by_cardinal']['north'],
-    'wwr_east_': lambda r: r['wwr_by_cardinal']['east'],
-    'wwr_south_': lambda r: r['wwr_by_cardinal']['south'],
-    'wwr_west_': lambda r: r['wwr_by_cardinal']['west'],
+    'wwr_north_': lambda r: _wwr(r, 'north'),
+    'wwr_east_': lambda r: _wwr(r, 'east'),
+    'wwr_south_': lambda r: _wwr(r, 'south'),
+    'wwr_west_': lambda r: _wwr(r, 'west'),
     'wall_thickness_': lambda r: r['wall_thickness'],
     'overhang_extra_': lambda r: r['additional_horizontal_shading_depth'],
     'fin_extra_': lambda r: r['additional_vertical_shading_depth'],
