@@ -82,3 +82,27 @@ def test_job_key_ignores_fields_the_task_does_not_read():
     assert job_key('simulation.energy', base) != job_key('simulation.energy', other_energy)
     assert job_key('simulation.daylight', base) != job_key('simulation.daylight', other_room)
     assert job_key('simulation.daylight', base) != job_key('simulation.energy', base)
+
+
+def test_grasshopper_file_holds_the_request(client):
+    import json
+    import xml.etree.ElementTree as ET
+    from api.grasshopper import _objects
+
+    room = {'footprint_coordinates': [[0, 0], [9, 0], [9, 7], [0, 7]], 'floors': 40,
+            'wwr_by_cardinal': {'north': 0.1, 'east': 0.2, 'south': 0.6, 'west': 0.3}}
+    response = post(client, '/v1/grasshopper', {'room': room, 'energy': ENERGY})
+    assert response.status_code == 200, response.text
+    assert 'heath.ghx' in response.headers['content-disposition']
+    objects = dict(_objects(ET.fromstring(response.content)))
+
+    def item(nick, name):
+        return objects[nick].find(f".//item[@name='{name}']").text
+
+    sent = json.loads(item('request', 'UserText'))
+    assert sent['room']['footprint_coordinates'] == room['footprint_coordinates']
+    assert 'pack' not in sent
+    assert float(item('_floors_', 'Value')) == 40 <= float(item('_floors_', 'Max'))
+    assert float(item('wwr_south_', 'Value')) == 0.6
+    assert item('all_floors_', 'ToggleValue') == 'false'
+    assert 'def sensor_points' in item('Heath Sensors', 'CodeInput')

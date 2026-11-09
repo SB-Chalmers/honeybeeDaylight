@@ -30,6 +30,7 @@ COPY api/ api/
 COPY worker/ worker/
 COPY simulation/ simulation/
 COPY weather/ weather/
+COPY grasshopper/ grasshopper/
 
 EXPOSE 8000
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -4,6 +4,7 @@ api.routes
   POST /v1/daylight   daylight only (DF, optional DA/sDA)
   POST /v1/energy     energy only (annual totals, monthly balance, hourly loads)
   POST /v1/simulate   both, run at the same time
+  POST /v1/grasshopper the same request as a Grasshopper definition (.ghx)
 
 Each request is validated, put on a Celery queue, and answered when the
 worker is done. Identical requests share one job and abandoned jobs are
@@ -16,10 +17,12 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import Response
 
 from worker import celery_app
 
 from .auth import require_api_key
+from .grasshopper import grasshopper_file
 from .jobs import submit, wait
 from .schemas import (
     DaylightRequest,
@@ -27,6 +30,7 @@ from .schemas import (
     EnergyRequest,
     EnergyResult,
     ErrorResponse,
+    GrasshopperRequest,
     SimulateRequest,
     SimulateResult,
 )
@@ -67,3 +71,19 @@ async def simulate(body: SimulateRequest, request: Request):
         wait(*submit(celery_app.energy, payload), request),
     )
     return {'daylight': daylight_result, 'energy': energy_result}
+
+
+@router.post('/grasshopper', responses={200: {'content': {'application/xml': {}}}})
+async def grasshopper(body: GrasshopperRequest):
+    """The request as a Grasshopper definition that rebuilds the same model.
+
+    Open it in Rhino 8 with Ladybug Tools and Foton installed (see
+    grasshopper/README.md). Nothing is simulated here.
+    """
+    payload = _payload(body)
+    payload.pop('pack', None)
+    return Response(
+        grasshopper_file(payload),
+        media_type='application/xml',
+        headers={'Content-Disposition': 'attachment; filename="heath.ghx"'},
+    )

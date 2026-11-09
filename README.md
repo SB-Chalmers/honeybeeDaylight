@@ -35,6 +35,7 @@ service and Foton runs on the CPU (much slower).
 | `POST` | `/v1/daylight` | Daylight factor per sensor, plus DA/sDA when `daylight.run_sda` is true |
 | `POST` | `/v1/energy` | Annual heating/cooling/total, monthly heat balance, hourly heating and cooling |
 | `POST` | `/v1/simulate` | Both, in parallel |
+| `POST` | `/v1/grasshopper` | The request as a Grasshopper file (`heath.ghx`) that rebuilds the same model; see [grasshopper/README.md](grasshopper/README.md) |
 | `GET` | `/health` | Liveness (no key needed) |
 
 Full schemas are at `/docs`. A minimal request:
