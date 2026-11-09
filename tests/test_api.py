@@ -70,3 +70,15 @@ def test_bad_input_from_worker_is_400(client, monkeypatch):
 def test_validation_error_is_422(client):
     response = post(client, '/v1/daylight', {'room': {'footprint_coordinates': [[0, 0]]}})
     assert response.status_code == 422
+
+
+def test_job_key_ignores_fields_the_task_does_not_read():
+    from api.jobs import job_key
+
+    base = {'room': ROOM, 'context_buildings': [], 'epw': None, 'pack': True, 'daylight': {}, 'energy': ENERGY}
+    other_energy = {**base, 'energy': {**ENERGY, 'building_program': 'School'}}
+    other_room = {**base, 'room': {'footprint_coordinates': [[0, 0], [5, 0], [5, 4], [0, 4]]}}
+    assert job_key('simulation.daylight', base) == job_key('simulation.daylight', other_energy)
+    assert job_key('simulation.energy', base) != job_key('simulation.energy', other_energy)
+    assert job_key('simulation.daylight', base) != job_key('simulation.daylight', other_room)
+    assert job_key('simulation.daylight', base) != job_key('simulation.energy', base)

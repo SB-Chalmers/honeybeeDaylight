@@ -16,10 +16,11 @@ def test_energy_uses_physical_cores(monkeypatch):
     assert concurrency.concurrency('energy') == 8
 
 
-def test_daylight_two_per_gpu_or_one_without(monkeypatch):
+def test_daylight_uses_cores_with_a_gpu_or_one_without(monkeypatch):
     monkeypatch.delenv('DAYLIGHT_CONCURRENCY', raising=False)
+    monkeypatch.setattr(concurrency, 'physical_cores', lambda: 8)
     monkeypatch.setattr(concurrency, 'gpu_count', lambda: 1)
-    assert concurrency.concurrency('daylight') == 2
+    assert concurrency.concurrency('daylight') == 8
     monkeypatch.setattr(concurrency, 'gpu_count', lambda: 0)
     assert concurrency.concurrency('daylight') == 1
 

@@ -38,18 +38,19 @@ def gpu_count() -> int:
     return len(glob.glob('/dev/nvidia[0-9]*'))
 
 
-# Chosen from a sweep on the Precision 7540 (8 cores, 1 GPU) under five load
-# patterns, from 4 clients to a 24-client class mix: one EnergyPlus process per
-# physical core, and two Foton processes per GPU (one prepares the next model
-# on the CPU while the other traces). More energy processes than cores add
-# waiting, not throughput.
+# One process per physical core for both queues. EnergyPlus is CPU-bound, and
+# so is a daylight job: profiled on the Precision 7540 (Foton 0.3.6), about 99%
+# of a preview job is CPU work (rebuilding the Honeybee model, checking and
+# meshing it) and about 1% is GPU tracing, so the GPU is nearly idle with two
+# processes and more processes mean more jobs in flight. Without a GPU, Foton
+# traces on the CPU and one process is enough.
 def concurrency(queue: str) -> int:
     override = os.environ.get(f'{queue.upper()}_CONCURRENCY', '').strip()
     if override:
         return max(1, int(override))
-    if queue == 'energy':
-        return physical_cores()
-    return 2 * gpu_count() or 1
+    if queue == 'daylight' and not gpu_count():
+        return 1
+    return physical_cores()
 
 
 if __name__ == '__main__':

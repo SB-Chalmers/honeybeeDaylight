@@ -4,17 +4,17 @@ worker.celery_app
 Celery app and the two tasks. Each task goes to its own queue so the hardware
 can be matched to the work:
 
-  daylight  Foton ray tracing. Run one worker process per GPU (concurrency 1).
-  energy    EnergyPlus. Run about one worker process per CPU core.
+  daylight  Foton. Mostly CPU setup, a little GPU tracing: one process per core.
+  energy    EnergyPlus. One process per core.
 
 Workers pull a job only when they are free (acks_late + prefetch 1), so jobs
 spread across every worker on every machine attached to the same Redis.
 Results live in Redis for RESULT_TTL_SECONDS and then expire; clients keep
 their own copies.
 
-Start a worker:
-  celery -A worker.celery_app worker -Q daylight --concurrency 1
-  celery -A worker.celery_app worker -Q energy   --concurrency $(nproc)
+Start a worker (docker-compose.yml picks the counts with worker/concurrency.py):
+  celery -A worker.celery_app worker -Q daylight --concurrency 8
+  celery -A worker.celery_app worker -Q energy   --concurrency 8
 """
 
 from __future__ import annotations
