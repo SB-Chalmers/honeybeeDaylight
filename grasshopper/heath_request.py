@@ -49,6 +49,21 @@ def footprint_points(coords):
     return coords[:-1] if coords[0] == coords[-1] else coords
 
 
+def counter_clockwise(room):
+    """Reverse a clockwise footprint (and its per-edge lists) like the API does."""
+    points = footprint_points(room['footprint_coordinates'])
+    n = len(points)
+    area2 = sum(points[i][0] * points[(i + 1) % n][1] - points[(i + 1) % n][0] * points[i][1]
+                for i in range(n))
+    if area2 < 0:
+        room['footprint_coordinates'] = [list(p) for p in points[::-1]]
+        for name in ('wwr_by_edge', 'shared_floors_by_edge'):
+            edges = room.get(name)
+            if edges is not None and len(edges) == n:
+                room[name] = [edges[(n - 2 - k) % n] for k in range(n)]
+    return room
+
+
 def shared_edges(room, floor):
     """Footprint edges whose wall is a party wall on this floor (1-based)."""
     return set(i for i, floors in enumerate(room.get('shared_floors_by_edge') or [])
@@ -146,7 +161,7 @@ if 'ghenv' in globals() and _request:
         return rg.PolylineCurve(points + [points[0]])
 
     request = json.loads(_request)
-    room = request['room']
+    room = counter_clockwise(request['room'])
     floors = int(_floors_) if _floors_ is not None else int(room.get('floors', 1))
     footprint = _polyline(room['footprint_coordinates'])
     floor_height = float(room.get('floor_to_floor_height', 3.2))

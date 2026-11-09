@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ── Building description ─────────────────────────────────────────────────────
@@ -115,6 +115,27 @@ class RoomInput(BaseModel):
                 raise ValueError('Floor numbers in shared_floors_by_edge must be >= 1.')
         return v
 
+    @model_validator(mode='after')
+    def _counter_clockwise(self):
+        """Store the footprint counter-clockwise, which Honeybee needs to extrude it.
+
+        A clockwise footprint would give an inside-out room. The per-edge lists
+        follow their edges: in the reversed list, edge k is the old edge n-2-k.
+        """
+        points = self.footprint_coordinates
+        if points[0] == points[-1]:
+            points = points[:-1]
+        n = len(points)
+        area2 = sum(points[i][0] * points[(i + 1) % n][1] - points[(i + 1) % n][0] * points[i][1]
+                    for i in range(n))
+        if area2 < 0:
+            self.footprint_coordinates = points[::-1]
+            for name in ('wwr_by_edge', 'shared_floors_by_edge'):
+                edges = getattr(self, name)
+                if edges is not None and len(edges) == n:
+                    setattr(self, name, [edges[(n - 2 - k) % n] for k in range(n)])
+        return self
+
     def to_simulation_dict(self) -> dict:
         """Convert to the flat dict expected by simulation.inputs.load_room_inputs."""
         d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge', 'shared_floors_by_edge'})
@@ -204,6 +225,12 @@ class SimulateRequest(_Base):
     """Body of POST /v1/simulate."""
     daylight: DaylightOptions = Field(default_factory=DaylightOptions)
     energy: EnergyOptions
+
+
+class GrasshopperRequest(_Base):
+    """Body of POST /v1/grasshopper: a /v1/simulate body, energy optional."""
+    daylight: DaylightOptions = Field(default_factory=DaylightOptions)
+    energy: Optional[EnergyOptions] = None
 
 
 # ── Responses ────────────────────────────────────────────────────────────────

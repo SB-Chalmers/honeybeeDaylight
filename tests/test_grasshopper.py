@@ -57,3 +57,12 @@ def test_layer_values_use_backend_defaults():
     record = {'name': 'Wall', 'layers': [{'material_name': 'Brick', 'thickness_m': 0.2}]}
     assert heath_request.layer_values(record) == [['Brick', 0.2, 0.8, 1800.0, 900.0]]
     assert heath_request.layer_values({'name': 'Slab', 'layers': []}) == [['Slab_mat', 0.2, 0.8, 1800, 900]]
+
+
+def test_clockwise_footprint_is_reversed_like_the_api():
+    from api.schemas import RoomInput
+    cw = {'footprint_coordinates': L_SHAPE[::-1], 'wwr_by_edge': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]}
+    api = RoomInput(**cw)
+    ours = heath_request.counter_clockwise(dict(cw))
+    assert ours['footprint_coordinates'] == api.footprint_coordinates
+    assert ours['wwr_by_edge'] == api.wwr_by_edge
