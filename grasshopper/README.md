@@ -1,8 +1,14 @@
 # Heath in Grasshopper
 
-`heath.ghx` rebuilds a Heath request with stock Honeybee, Dragonfly and Foton
-components, so students can continue a Heath study in Grasshopper. It builds
-the same model as this backend and gives the same daylight and energy results.
+`heath.ghx` rebuilds a Heath request with stock Honeybee and Foton components,
+so students can continue a Heath study in Grasshopper.
+
+The file uses **one model for daylight and energy**: every zone has Heath's
+detailed windows, overhangs and fins, and the daylight floor is a zone of its
+own. The backend instead uses a detailed room for daylight and a simpler energy
+model with one window per wall, so the numbers differ a little. With only the
+energy windows detailed, heating came out 1.6% higher on the example request
+and cooling 0.3% lower.
 
 ## For students
 
@@ -34,7 +40,8 @@ the results:
    cannot translate *NoLimit* (honeybee-openstudio 0.3.11).
 2. Zone sizing is on, which OpenStudio needs for the ideal air system.
 
-Measured on the example request, energy is within 0.004 kWh/m² a year of the backend.
+Built with the backend's own geometry, these two settings change energy by
+less than 0.004 kWh/m² a year on the example request.
 
 Not modelled in the template yet: party walls (`shared_floors_by_edge`) and
 per-edge window ratios (`wwr_by_edge`).
