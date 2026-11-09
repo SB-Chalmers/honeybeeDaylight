@@ -66,3 +66,12 @@ def test_clockwise_footprint_is_reversed_like_the_api():
     ours = heath_request.counter_clockwise(dict(cw))
     assert ours['footprint_coordinates'] == api.footprint_coordinates
     assert ours['wwr_by_edge'] == api.wwr_by_edge
+
+
+@pytest.mark.parametrize('floors,alone,expected', [
+    (6, [3], [[1], [2], [3], [4, 5], [6]]),
+    (6, [1], [[1], [2, 3, 4, 5], [6]]),
+    (3, [1, 2, 3], [[1], [2], [3]]),
+])
+def test_daylight_floors_get_their_own_zone(floors, alone, expected):
+    assert heath_request.floor_groups({}, floors, alone) == expected

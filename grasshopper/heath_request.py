@@ -2,7 +2,10 @@
 Heath Request: read a Heath request (the JSON body of /v1/simulate) in Grasshopper.
 
 Code of the "Heath Request" GhPython component. It only reads values; the
-model is built by stock Honeybee components on the canvas. Numbers that Heath
+model is built by stock Honeybee components on the canvas. Unlike the Heath
+backend, which builds a detailed daylight room and a simpler energy model, the
+canvas builds one model for both: every zone has the detailed windows,
+overhangs and fins, and the daylight floor is a zone of its own. Numbers that Heath
 shows as sliders (floors, orientation, window ratios, window sizes, shading
 depths) are sliders on the canvas, so they are not outputs here.
 
@@ -12,8 +15,9 @@ Outputs:
     context        neighbour footprints (closed polylines at z = 0)
     context_height height of each neighbour (floors x floor height)
     grid_size      sensor spacing (m); grid_offset: sensor height above the floor (m)
-    group_floors   first floor (1-based) of each energy zone
-    multipliers    floors each energy zone stands for (identical middle floors)
+    group_floors   first floor (1-based) of each zone
+    multipliers    floors each zone stands for (identical middle floors)
+    grid_zones     indices of the zones that get a sensor grid (the daylight floors)
     shared_edges   per footprint edge, the floors where it is a party wall
     program        honeybee-energy program type for the Heath building_program
     natural_vent   True when Heath's natural ventilation is on (no cooling)
@@ -70,14 +74,17 @@ def shared_edges(room, floor):
                if floor in floors)
 
 
-def floor_groups(room, floors):
-    """Energy zones: ground and top floors alone, identical middle floors merged.
+def floor_groups(room, floors, alone=()):
+    """Zones: ground and top floors alone, identical middle floors merged.
 
-    Returns [[first, ..., last], ...] like simulation/energy/idf_builder.py.
+    Floors in ``alone`` (the daylight floors) also get a zone of their own, so
+    their sensors sit in real geometry. Without ``alone`` this returns
+    [[first, ..., last], ...] like simulation/energy/idf_builder.py.
     """
     groups, previous = [], None
     for floor in range(1, floors + 1):
-        key = (floor == 1, floor == floors, frozenset(shared_edges(room, floor)))
+        key = (floor == 1 or floor in alone, floor == floors or floor in alone,
+               frozenset(shared_edges(room, floor)))
         if key == previous and not key[0] and not key[1]:
             groups[-1].append(floor)
         else:
@@ -150,7 +157,8 @@ def weather_file(request, folder):
     return path
 
 
-# The Grasshopper component. Inputs: _request (JSON text), _floors_ (the floors slider).
+# The Grasshopper component. Inputs: _request (JSON text) and the sliders
+# _floors_, _floor_ (the daylight floor) and all_floors_ (daylight on every floor).
 if 'ghenv' in globals() and _request:
     import os
     import tempfile
@@ -171,9 +179,15 @@ if 'ghenv' in globals() and _request:
     grid = room.get('sensor_grid') or {}
     grid_size = grid.get('x_dim', 0.5)
     grid_offset = grid.get('offset', 0.75)
-    groups = floor_groups(room, floors)
+    if all_floors_:
+        daylight_floors = list(range(1, floors + 1))
+    else:
+        selected = int(_floor_) if _floor_ is not None else int(room.get('selected_floor_number', 1))
+        daylight_floors = [min(max(selected, 1), floors)]
+    groups = floor_groups(room, floors, daylight_floors)
     group_floors = [g[0] for g in groups]
     multipliers = [len(g) for g in groups]
+    grid_zones = [i for i, g in enumerate(groups) if g[0] in daylight_floors]
     shared_edges = [str(f) for f in (room.get('shared_floors_by_edge') or [])]
     daylight = request.get('daylight') or {}
     quality = daylight.get('quality', 'preview')
