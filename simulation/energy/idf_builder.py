@@ -7,7 +7,8 @@ Grasshopper:
   floors merged with a zone multiplier (HB Room multiplier);
 - floors and ceilings between storeys adiabatic, shared party walls adiabatic
   (HB Properties / boundary condition);
-- one window per wall at the requested ratio (HB Apertures by Ratio);
+- one window per wall at the requested ratio (HB Apertures by Ratio), with
+  an overhang and two fins as deep as the daylight model's;
 - program type, EPSM constructions and an unlimited ideal air system
   (HB Program / Construction Set / Ideal Air);
 - context buildings as detached shades (HB Shade);
@@ -148,6 +149,10 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     from honeybee_energy.hvac.idealair import IdealAirSystem
     from honeybee.altnumber import no_limit
 
+    thickness = float(room.get('wall_thickness', 0.3))
+    h_depth = thickness + float(room.get('additional_horizontal_shading_depth', 0.0))
+    v_depth = thickness + float(room.get('additional_vertical_shading_depth', 0.0))
+
     all_rooms = []
     for group in floor_groups(room):
         first, last = group[0], group[-1]
@@ -169,7 +174,9 @@ def build_idf(room: dict, constructions: dict, building_program: str,
 
         # One window per wall with the requested glazing ratio (HB Apertures by Ratio).
         # Energy only needs glazed area and orientation; the daylight model keeps
-        # the individual windows. Fins and overhangs are left out of the energy model.
+        # the individual windows. That one window gets an overhang and two fins as
+        # deep as the daylight model's, so cooling responds to reveals and
+        # overhangs. Shading every individual window instead costs ~15 s a run.
         edge_wwr = room.get('wwr_by_edge')
         walls = [f for f in r.faces if str(f.type) == 'Wall']
         if edge_wwr is not None and len(edge_wwr) == len(walls):
@@ -182,6 +189,12 @@ def build_idf(room: dict, constructions: dict, building_program: str,
                 make_adiabatic(wall_face)
             elif ratio > 0:
                 wall_face.apertures_by_ratio(ratio, 0.01)
+                for aperture in wall_face.apertures:
+                    if h_depth > 0:
+                        aperture.overhang(depth=h_depth)
+                    if v_depth > 0:
+                        aperture.left_fin(depth=v_depth)
+                        aperture.right_fin(depth=v_depth)
 
         prog = program_type_by_identifier(PROGRAMS[building_program]).duplicate()
         # Natural ventilation: raise the cooling setpoint to 50 °C so the ideal

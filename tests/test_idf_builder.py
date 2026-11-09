@@ -109,3 +109,17 @@ class TestMultipliers:
         _, area, multipliers = build_idf({**ROOM, 'floors': 6}, CONSTRUCTIONS, 'Office', False, [])
         assert multipliers == {'FLOOR_1': 1, 'FLOORS_2_5': 4, 'FLOOR_6': 1}
         assert area == pytest.approx(8 * 6 * 6)
+
+
+def test_each_window_gets_an_overhang_and_two_fins(captured_model):
+    """Depth = wall thickness + extra depth, as in the daylight model."""
+    model, _ = captured_model({**ROOM, 'additional_horizontal_shading_depth': 0.5})
+    apertures = [aperture for hb_room in model.rooms for aperture in hb_room.apertures]
+    assert apertures
+    for aperture in apertures:
+        shades = aperture.outdoor_shades
+        assert len(shades) == 3
+        overhang = next(s for s in shades if 'Overhang' in s.identifier).geometry
+        width = max(v.distance_to_point(w) for v in aperture.geometry.vertices
+                    for w in aperture.geometry.vertices if abs(v.z - w.z) < 1e-9)
+        assert overhang.area == pytest.approx(width * 0.8)
