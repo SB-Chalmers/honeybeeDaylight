@@ -83,7 +83,12 @@ class RoomInput(BaseModel):
     additional_vertical_shading_depth: float = Field(0.0, ge=0)
     window_width: float = Field(1.2, gt=0)
     window_height: float = Field(1.5, gt=0)
-    window_spacing: float = Field(0.3, ge=0)
+    window_spacing: float = Field(
+        0.0, ge=0,
+        description='Gap between the two rows a window is split into (Honeybee vertical_separation); '
+                    'it also widens the window module to window_width + window_spacing. '
+                    'Heath sends 0: one pane per window.',
+    )
     sensor_grid: SensorGridConfig = Field(default_factory=SensorGridConfig)
 
     @field_validator('footprint_coordinates')
