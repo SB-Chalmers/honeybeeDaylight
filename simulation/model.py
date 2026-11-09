@@ -14,9 +14,11 @@ energy/idf_builder.py with simpler windows.
 
 import math
 
+import numpy as np
 from honeybee.model import Model
 from honeybee.room import Room
 from honeybee.shade import Shade
+from honeybee_radiance.sensor import Sensor
 from honeybee_radiance.sensorgrid import SensorGrid
 from ladybug_geometry.geometry3d.face import Face3D
 from ladybug_geometry.geometry3d.pointvector import Point3D
@@ -116,17 +118,51 @@ def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
 
 
 
+def _points_inside(polygon: np.ndarray, points: np.ndarray) -> np.ndarray:
+    """Even-odd (ray casting) point-in-polygon test, vectorised over points.
+
+    polygon is (m, 2), points (n, 2). A horizontal ray from each point counts
+    the polygon edges it crosses; an odd count means inside.
+    """
+    x, y = points[:, 0, None], points[:, 1, None]
+    x0, y0 = polygon[:, 0], polygon[:, 1]
+    x1, y1 = np.roll(x0, -1), np.roll(y0, -1)
+    straddles = (y0 <= y) != (y1 <= y)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        x_cross = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
+    return (np.count_nonzero(straddles & (x < x_cross), axis=1) % 2) == 1
+
+
 def _sensor_grid(room: Room, cfg: dict, identifier: str) -> SensorGrid:
-    """Sensor grid over the room floor (room[0] is the floor face), facing up."""
+    """Upward-facing sensors on a regular grid over the room floor.
+
+    Ladybug's ``Face3D.mesh_grid`` does the same in pure Python, one sensor at
+    a time, and was about a fifth of a daylight job. Here the grid is laid out
+    with numpy: cell centres aligned with the floor's first edge (so it turns
+    with the building), kept where they fall inside the footprint, lifted by
+    ``offset`` metres. Foton weights sensors equally when a grid has no mesh,
+    which a regular grid is anyway.
+    """
     g = cfg.get('sensor_grid') or {}
-    grid = SensorGrid.from_face3d(
-        identifier,
-        [room[0].geometry],
-        x_dim=g.get('x_dim', GRID_DIM),
-        y_dim=g.get('y_dim', GRID_DIM),
-        offset=g.get('offset', 0.75),
-        flip=True,
-    )
+    x_dim, y_dim = g.get('x_dim', GRID_DIM), g.get('y_dim', GRID_DIM)
+    floor = room[0].geometry  # room[0] is the floor face
+    z = floor.vertices[0].z + g.get('offset', 0.75)
+    polygon = np.array([(v.x, v.y) for v in floor.boundary], dtype=np.float64)
+
+    # Grid axes: along the first footprint edge and perpendicular to it.
+    u = polygon[1] - polygon[0]
+    u /= np.linalg.norm(u)
+    axes = np.array([u, [-u[1], u[0]]])          # rows: u, v
+    local = (polygon - polygon[0]) @ axes.T       # footprint in (u, v)
+    lo, hi = local.min(axis=0), local.max(axis=0)
+    us = np.arange(lo[0] + x_dim / 2, hi[0], x_dim)
+    vs = np.arange(lo[1] + y_dim / 2, hi[1], y_dim)
+    centres = np.stack(np.meshgrid(us, vs, indexing='ij'), axis=-1).reshape(-1, 2)
+    world = centres @ axes + polygon[0]           # back to world x, y
+    world = world[_points_inside(polygon, world)]
+
+    sensors = [Sensor((float(x), float(y), float(z)), (0.0, 0.0, 1.0)) for x, y in world]
+    grid = SensorGrid(identifier, sensors)
     grid.room_identifier = room.identifier
     return grid
 

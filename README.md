@@ -53,8 +53,13 @@ Full schemas are at `/docs`. A minimal request:
   workstation GPU, twice the throughput). Send `"daylight": {"quality": "final"}`
   for the full sample budget (about 1.2 s).
 - **Weather.** `gothenburg_tmyx.epw` unless the request includes `"epw": "<EPW file text>"`.
-- **Floors.** Every floor gets a room and a sensor grid. `sensor_grids` gives
+- **Floors.** By default only `room.selected_floor_number` (1 = ground) is
+  simulated. `"simulate_all_floors": true` gives every floor a room and a
+  sensor grid, and the job takes proportionally longer. `sensor_grids` gives
   each floor's `start_sensor_index` and `sensor_count` in the flat arrays.
+- **Sensor grid.** 0.5 m spacing, 0.75 m above the floor, aligned with the
+  first footprint edge. Change it with `room.sensor_grid` (`x_dim`, `y_dim`,
+  `offset`). Job time grows with the sensor count.
 - **Shared walls.** `room.shared_floors_by_edge` lists, per footprint edge,
   the floors whose wall touches a neighbour. Those walls become adiabatic
   and get no windows.

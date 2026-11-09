@@ -14,7 +14,7 @@ import copy
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
-GRID_DIM = 0.3  # fallback sensor spacing (m)
+GRID_DIM = 0.5  # fallback sensor spacing (m)
 
 DEFAULT_ROOM_INPUTS = {
     # 2-D footprint polygon; auto-closed if last point ≠ first.
@@ -41,8 +41,8 @@ DEFAULT_ROOM_INPUTS = {
     },
     # Sensor grid; omit to use GRID_DIM defaults.
     'sensor_grid': {
-        'x_dim': 0.3,
-        'y_dim': 0.3,
+        'x_dim': 0.5,
+        'y_dim': 0.5,
         'offset': 0.75,
     },
     # Wall thickness is the baseline shading depth for overhang + fins.
