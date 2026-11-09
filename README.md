@@ -53,8 +53,13 @@ Full schemas are at `/docs`. A minimal request:
   workstation GPU, twice the throughput). Send `"daylight": {"quality": "final"}`
   for the full sample budget (about 1.2 s).
 - **Weather.** `gothenburg_tmyx.epw` unless the request includes `"epw": "<EPW file text>"`.
-- **Floors.** Every floor gets a room and a sensor grid. `sensor_grids` gives
+- **Floors.** By default only `room.selected_floor_number` (1 = ground) is
+  simulated. `"simulate_all_floors": true` gives every floor a room and a
+  sensor grid, and the job takes proportionally longer. `sensor_grids` gives
   each floor's `start_sensor_index` and `sensor_count` in the flat arrays.
+- **Sensor grid.** 0.5 m spacing, 0.75 m above the floor, aligned with the
+  first footprint edge. Change it with `room.sensor_grid` (`x_dim`, `y_dim`,
+  `offset`). Job time grows with the sensor count.
 - **Shared walls.** `room.shared_floors_by_edge` lists, per footprint edge,
   the floors whose wall touches a neighbour. Those walls become adiabatic
   and get no windows.
@@ -188,10 +193,12 @@ To run the stack without Docker: start `redis-server`, then
 
 ## Capacity
 
-Worker counts are chosen at startup by `worker/concurrency.py`: one EnergyPlus
-process per physical core and two Foton processes per GPU. A sweep on the
-Precision 7540 (i9-9880H with 8 cores, Quadro RTX 3000) picked this over 6 to 12
-energy and 1 to 2 daylight processes as the best across five load patterns:
+Worker counts are chosen at startup by `worker/concurrency.py`: one process per
+physical core for each queue. A daylight `preview` job is about 99% CPU work
+(rebuilding, checking and meshing the Honeybee model) and 1% GPU tracing, so
+the GPU is never the bottleneck; the number of daylight processes is. Numbers
+below are from the Precision 7540 (i9-9880H with 8 cores, Quadro RTX 3000)
+with the earlier setting of two daylight processes:
 
 | Load (clients sending back to back) | Requests/min | Median | p95 |
 |---|---|---|---|
@@ -203,6 +210,18 @@ energy and 1 to 2 daylight processes as the best across five load patterns:
 
 Under a full class the time is mostly queueing; one request on an idle
 machine takes about 1 s (daylight `preview`) or 2 s (energy).
+
+Three things keep the queues short (`api/jobs.py`):
+
+- **Identical requests share one job.** The job is keyed by a hash of the fields
+  it reads, so a repeated request, or the daylight half of `/v1/simulate` when
+  only the energy options changed, reuses a queued, running or finished job.
+  Results stay for `RESULT_TTL_SECONDS`.
+- **Abandoned jobs are cancelled.** When every client waiting for a job has
+  disconnected before it starts, the job is revoked and never runs.
+- **Energy need not wait for daylight.** `/v1/simulate` answers when both are
+  done. A client that wants energy as soon as it is ready calls `/v1/daylight`
+  and `/v1/energy` at the same time.
 
 Measured 2026-11-04 on a 4-core cloud machine (energy only, 1 to 5 storey
 buildings, each student waiting 5 to 30 s between requests):

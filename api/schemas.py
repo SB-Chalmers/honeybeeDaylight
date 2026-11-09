@@ -29,8 +29,8 @@ def _check_footprint(v: list[list[float]]) -> list[list[float]]:
 
 class SensorGridConfig(BaseModel):
     """Sensor spacing (m) and height above the floor (m)."""
-    x_dim: float = 0.3
-    y_dim: float = 0.3
+    x_dim: float = 0.5
+    y_dim: float = 0.5
     offset: float = 0.75
 
 
@@ -56,8 +56,10 @@ class RoomInput(BaseModel):
     floors: int = Field(1, ge=1)
     selected_floor_number: int = Field(1, ge=1)
     simulate_all_floors: bool = Field(
-        True,
-        description='Generate and sensor one Honeybee Room per building floor.',
+        False,
+        description='Simulate every floor instead of only selected_floor_number. '
+                    'Each floor adds a room and a sensor grid, so the job takes '
+                    'proportionally longer.',
     )
 
     # Accept either single float (fans out) or per-cardinal dict.

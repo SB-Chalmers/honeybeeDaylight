@@ -30,11 +30,11 @@ MINIMAL = {
 # ── load_room_inputs ──────────────────────────────────────────────────────────
 
 class TestLoadFromDict:
-    def test_sensor_grid_defaults_to_300_mm_spacing(self):
+    def test_sensor_grid_defaults_to_500_mm_spacing(self):
         cfg = load_room_inputs({})
-        assert GRID_DIM == 0.3
-        assert cfg['sensor_grid']['x_dim'] == 0.3
-        assert cfg['sensor_grid']['y_dim'] == 0.3
+        assert GRID_DIM == 0.5
+        assert cfg['sensor_grid']['x_dim'] == 0.5
+        assert cfg['sensor_grid']['y_dim'] == 0.5
 
     def test_returns_merged_dict(self):
         cfg = load_room_inputs({'footprint_coordinates': [[0,0],[5,0],[5,5],[0,5]]})

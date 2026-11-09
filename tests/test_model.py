@@ -9,6 +9,7 @@ Covers: room geometry from footprint, orientation, floor elevation,
 import pytest
 
 from simulation.inputs import load_room_inputs
+from ladybug_geometry.geometry3d.pointvector import Point3D
 from simulation.model import build_model
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -180,6 +181,19 @@ class TestSensorGrid:
         _, grid_small = build_model(cfg(**{'footprint_coordinates': [[0,0],[4,0],[4,4],[0,4]]}))
         _, grid_large = build_model(cfg(**{'footprint_coordinates': [[0,0],[8,0],[8,8],[0,8]]}))
         assert grid_large.count > grid_small.count
+
+    def test_grid_tiles_the_footprint_also_when_rotated(self):
+        """72 m2 at 0.5 m is 288 sensors, whatever the orientation (Ladybug's
+        world-aligned mesh_grid lost about a fifth of them on rotated buildings)."""
+        footprint = [[0, 0], [10, 0], [10, 6], [4, 6], [4, 9], [0, 9]]  # L shape, 72 m2
+        for angle in (0.0, 37.0):
+            model, grid = build_model(cfg(footprint_coordinates=footprint, orientation_offset=angle))
+            assert grid.count == 288
+            assert all(abs(s.pos[2] - 0.75) < 1e-9 for s in grid.sensors)
+            assert all(s.dir == (0.0, 0.0, 1.0) for s in grid.sensors)
+            # every sensor sits 0.75 m above a point of the floor polygon
+            floor = model.rooms[0][0].geometry
+            assert all(floor.is_point_on_face(Point3D(s.pos[0], s.pos[1], 0.0), 1e-6) for s in grid.sensors)
 
     def test_coarser_grid_has_fewer_sensors(self):
         _, grid_fine   = build_model(cfg(**{'sensor_grid': {'x_dim': 0.5, 'y_dim': 0.5, 'offset': 0.75}}))

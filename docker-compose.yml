@@ -3,8 +3,8 @@
 #   cp .env.example .env    # set APP_KEYS
 #   docker compose up -d --build
 #
-# Worker counts follow the hardware (worker/concurrency.py): two daylight
-# processes per GPU and one EnergyPlus process per physical core.
+# Worker counts follow the hardware (worker/concurrency.py): one process per
+# physical core for each queue (a daylight job is almost all CPU setup).
 # Worker processes are replaced after 200 jobs (WORKER_MAX_TASKS_PER_CHILD in
 # worker/celery_app.py), so a slow leak cannot build up during a long class.
 
