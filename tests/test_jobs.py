@@ -48,6 +48,30 @@ def test_bad_room_and_bad_epw_are_client_errors():
         jobs.daylight_job({'room': ROOM, 'epw': 'not a weather file'})
 
 
+BROKEN_ROOMS = {
+    'zero width': ({'footprint_coordinates': [[0, 0], [8, 0], [8, 0], [0, 0]]}, 'enclose 0.00'),
+    'points on one line': ({'footprint_coordinates': [[0, 0], [4, 0], [8, 0]]}, 'enclose 0.00'),
+    'bow tie': ({'footprint_coordinates': [[0, 0], [4, 4], [4, 0], [0, 4]]}, 'cross'),
+    'sensors above ceiling': ({'floor_to_floor_height': 0.5}, 'below the ceiling'),
+}
+
+
+@pytest.mark.parametrize('job', [jobs.daylight_job, jobs.energy_job])
+@pytest.mark.parametrize('room, message', BROKEN_ROOMS.values(), ids=BROKEN_ROOMS.keys())
+def test_broken_geometry_is_a_client_error(job, room, message):
+    """Impossible geometry is rejected (HTTP 400) before Foton or EnergyPlus run."""
+    request = {'room': {**ROOM, **room}, 'energy': {'constructions': {}}}
+    with pytest.raises(jobs.BadInput, match=message):
+        job(request)
+
+
+def test_room_too_small_for_its_sensor_grid_is_a_client_error(monkeypatch):
+    monkeypatch.setenv('FOTON_BACKEND', 'reference')
+    room = {**ROOM, 'sensor_grid': {'x_dim': 20.0, 'y_dim': 20.0, 'offset': 0.75}}
+    with pytest.raises(jobs.BadInput, match='No sensor fits'):
+        jobs.daylight_job({'room': room})
+
+
 @pytest.mark.parametrize('program', list(idf_builder.PROGRAMS))
 def test_idf_builds_for_every_program(program):
     idf, area, _ = idf_builder.build_idf(ROOM, CONSTRUCTIONS, program, False, [])
