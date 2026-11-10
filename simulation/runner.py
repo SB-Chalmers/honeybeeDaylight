@@ -63,7 +63,9 @@ def run_daylight(
 
     backend = _backend()
     _keep_driver_loaded(backend)
-    study = HoneybeeStudy(model, backend=backend, weather_memo=weather_memo)
+    # check=False: the model is built in code from validated input, so Foton's
+    # check_all / defensive copy / to_dict fingerprint (most of prepare time) are skipped.
+    study = HoneybeeStudy(model, backend=backend, weather_memo=weather_memo, check=False)
     positions = np.asarray(study.prepared.arrays['sensor_positions'], dtype=np.float32)
 
     df_run = study.daylight_factor(quality=quality)
