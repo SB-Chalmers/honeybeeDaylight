@@ -31581,7 +31581,6 @@ file size and unnecessary duplication.</item>
 - One model for daylight and energy, so results differ a little from the Heath backend (detailed daylight room + simpler energy model).
 - Not yet modelled: party walls (shared_floors_by_edge) and per-edge WWR (wwr_by_edge).
 - Ideal air limits are 1e7 W, not NoLimit: honeybee-openstudio 0.3.11 cannot translate NoLimit. A numeric cooling limit autosizes the air flow, so zone sizing is on (design days from the EPW).
-- Foton 0.3.6 stops with "triangle N is degenerate" on rooms from HB Room from Solid; fixed in the next Foton release.
 - sDA in Foton is the share of sensors with DA &gt;= 50 %; the sDA target is shown for reference.</item>
                   </items>
                   <chunks count="2">
@@ -33056,7 +33055,7 @@ faces split by adjacent geometries to have matching surfaces.</item>
                     <item name="ScrollRatio" type_name="gh_double" type_code="6">0</item>
                     <item name="SourceCount" type_name="gh_int32" type_code="3">0</item>
                     <item name="UserText" type_name="gh_string" type_code="10">Heath → Honeybee + Foton
-Version 0.2.0 — 2026-11-09
+Version 0.2.1 — 2026-11-10
 
 Rebuilds a Heath request with stock Honeybee/Foton components as ONE model for daylight and energy. The Heath backend uses a detailed daylight room and a simpler energy model, so results differ a little: energy here includes the detailed windows and shades, daylight includes the other floors around the room.
 
@@ -33065,7 +33064,7 @@ How to use:
 2. Check the sliders.
 3. Run steps 1–3 in order (the red groups).
 
-Requires Rhino 8, Ladybug Tools 1.8+, Foton 0.3.6 (Package Manager), OpenStudio 3.9.</item>
+Requires Rhino 8, Ladybug Tools 1.8+, Foton 0.3.7 (Package Manager), OpenStudio 3.9.</item>
                   </items>
                   <chunks count="2">
                     <chunk name="Attributes">
