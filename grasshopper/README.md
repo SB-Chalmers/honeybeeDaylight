@@ -13,7 +13,7 @@ and cooling 0.3% lower.
 ## For students
 
 1. **Install** Rhino 8, [Ladybug Tools](https://www.food4rhino.com/en/app/ladybug-tools)
-   1.8 or newer, OpenStudio 3.9, and **foton** 0.3.6 from Rhino's
+   1.8 or newer, OpenStudio 3.9, and **foton** 0.3.7 from Rhino's
    `PackageManager` (set `install_` on Foton Settings to True once).
 2. **Get the file.** In Heath, choose *Open in Grasshopper*. You get `heath.ghx`
    with your building already filled in. (Or open the `heath.ghx` from this folder and paste
