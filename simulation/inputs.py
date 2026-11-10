@@ -52,7 +52,7 @@ DEFAULT_ROOM_INPUTS = {
     # Window-generation defaults aligned with the Three.js editor settings.
     'window_width': 1.2,
     'window_height': 1.5,
-    'window_spacing': 0.3,
+    'window_spacing': 0.0,  # Heath's default: one pane per window
 }
 
 
@@ -101,7 +101,7 @@ def validate_room_inputs(cfg: dict) -> None:
         raise ValueError('window_width must be > 0.')
     if cfg.get('window_height', 1.5) <= 0:
         raise ValueError('window_height must be > 0.')
-    if cfg.get('window_spacing', 0.3) < 0:
+    if cfg.get('window_spacing', 0.0) < 0:
         raise ValueError('window_spacing must be >= 0.')
 
     coords = cfg['footprint_coordinates']

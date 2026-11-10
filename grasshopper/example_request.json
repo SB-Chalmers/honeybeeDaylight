@@ -1,0 +1,87 @@
+{
+  "room": {
+    "footprint_coordinates": [
+      [
+        0,
+        0
+      ],
+      [
+        14,
+        0
+      ],
+      [
+        14,
+        5
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        6,
+        11
+      ],
+      [
+        0,
+        11
+      ]
+    ],
+    "orientation_offset": 0,
+    "floor_to_floor_height": 3.2,
+    "floors": 4,
+    "selected_floor_number": 2,
+    "simulate_all_floors": true,
+    "wwr": 0.4,
+    "wall_thickness": 0.3,
+    "additional_horizontal_shading_depth": 0.0,
+    "additional_vertical_shading_depth": 0.0,
+    "window_width": 1.2,
+    "window_height": 1.5,
+    "window_spacing": 0,
+    "sensor_grid": {
+      "x_dim": 0.5,
+      "y_dim": 0.5,
+      "offset": 0.75
+    }
+  },
+  "context_buildings": [
+    {
+      "footprint_coordinates": [
+        [
+          20,
+          0
+        ],
+        [
+          30,
+          0
+        ],
+        [
+          30,
+          10
+        ],
+        [
+          20,
+          10
+        ]
+      ],
+      "floors": 4,
+      "floor_to_floor_height": 3.0
+    }
+  ],
+  "daylight": {
+    "run_sda": true,
+    "da_lux": 300,
+    "sda_target_pct": 50,
+    "quality": "preview"
+  },
+  "energy": {
+    "constructions": {
+      "wall": "Brick Wall with Insulation",
+      "floor": "Concrete Floor",
+      "roof": "Insulated Roof",
+      "window": "Double Glazed Window"
+    },
+    "building_program": "Office",
+    "natural_ventilation": false
+  }
+}

@@ -74,7 +74,7 @@ def _apply_wwr_and_shading(room: Room, cfg: dict, floor_number: int) -> None:
     edge_wwr = cfg.get('wwr_by_edge')
     window_width = float(cfg.get('window_width', 1.2))
     window_height = float(cfg.get('window_height', 1.5))
-    window_spacing = float(cfg.get('window_spacing', 0.3))
+    window_spacing = float(cfg.get('window_spacing', 0.0))
     h_depth = cfg['wall_thickness'] + cfg.get('additional_horizontal_shading_depth', 0.0)
     v_depth = cfg['wall_thickness'] + cfg.get('additional_vertical_shading_depth', 0.0)
 
