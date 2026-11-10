@@ -56,3 +56,25 @@ def test_sda_summary_counts_passing_sensors():
     summary = sda_summary(np.array([10.0, 50.0, 80.0, 49.9]), 300, 50)
     assert summary['passing_sensors'] == 2
     assert summary['sda'] == 50.0
+
+
+def test_studies_share_one_engine_per_process(monkeypatch):
+    import foton
+    from simulation import runner
+
+    real = foton.Engine
+    made = []
+
+    def counting(config):
+        made.append(config)
+        return real(config)
+
+    monkeypatch.setattr(runner, 'Engine', counting)
+    monkeypatch.setattr(runner, '_ENGINES', {})
+    model, grids = _model(floors=1)
+    first = run_daylight(model, grids.count, EPW, quality='preview')
+    second = run_daylight(model, grids.count, EPW, quality='preview')
+
+    assert made == [{'backend': 'reference'}]
+    assert foton.Engine is real
+    np.testing.assert_array_equal(first['df'], second['df'])
