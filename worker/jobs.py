@@ -19,7 +19,7 @@ import numpy as np
 from . import packing
 from simulation.energy.epsm_client import fetch_constructions
 from simulation.energy.simulate import run_energy
-from simulation.inputs import load_room_inputs, validate_room_inputs
+from simulation.inputs import GRID_DIM, load_room_inputs, validate_room_inputs
 from simulation.model import build_model
 from simulation.runner import df_summary, run_daylight, sda_summary
 
@@ -76,6 +76,12 @@ def daylight_job(request: dict) -> dict:
     with tempfile.TemporaryDirectory(prefix='daylight_') as folder:
         epw_path, weather = _weather(request.get('epw'), folder)
         model, grid = build(request['room'], request.get('context_buildings', []))
+        if grid.count == 0:
+            spacing = request['room'].get('sensor_grid') or {}
+            raise BadInput(
+                'No sensor fits on the floor: the room is too small or narrow for a '
+                f"{spacing.get('x_dim', GRID_DIM):g} × {spacing.get('y_dim', GRID_DIM):g} m sensor grid."
+            )
         result = run_daylight(
             model, grid.count, epw_path,
             run_sda=opts.get('run_sda', False),

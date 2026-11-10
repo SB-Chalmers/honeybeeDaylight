@@ -12,6 +12,8 @@ DEFAULT_ROOM_INPUTS                -> reference defaults dict
 
 import copy
 
+from ladybug_geometry.geometry2d import Point2D, Polygon2D
+
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
 GRID_DIM = 0.5  # fallback sensor spacing (m)
@@ -107,6 +109,7 @@ def validate_room_inputs(cfg: dict) -> None:
     coords = cfg['footprint_coordinates']
     if len(coords) < 3:
         raise ValueError('footprint_coordinates must include at least 3 points.')
+    _check_footprint_shape(coords)
 
     expected_edges = len(coords) - 1 if coords[0] == coords[-1] else len(coords)
 
@@ -142,3 +145,33 @@ def validate_room_inputs(cfg: dict) -> None:
     grid_cfg = cfg.get('sensor_grid') or {}
     if grid_cfg.get('x_dim', GRID_DIM) <= 0 or grid_cfg.get('y_dim', GRID_DIM) <= 0:
         raise ValueError('sensor_grid x_dim and y_dim must be > 0.')
+    if grid_cfg.get('offset', 0.75) >= cfg['floor_to_floor_height']:
+        raise ValueError('sensor_grid offset must be below the ceiling (less than floor_to_floor_height).')
+
+
+MIN_FLOOR_AREA = 1.0  # m²; smaller footprints are slider accidents, not rooms
+
+
+def _check_footprint_shape(coords) -> None:
+    """Raise ValueError if the footprint cannot be extruded into a room.
+
+    Catches what Honeybee and EnergyPlus would otherwise fail on later with an
+    unclear error: a footprint with (almost) no area, such as a zero-width
+    rectangle or points on one line, and one whose edges cross (a bow tie).
+    Repeated points are allowed and ignored.
+    """
+    points = []
+    for x, y in coords:
+        if not points or (x, y) != points[-1]:
+            points.append((x, y))
+    if len(points) > 1 and points[0] == points[-1]:
+        points.pop()
+    polygon = Polygon2D([Point2D(x, y) for x, y in points]) if len(points) >= 3 else None
+    if polygon and polygon.is_self_intersecting:
+        raise ValueError('footprint_coordinates edges cross each other; list the corners in order around the room.')
+    area = polygon.area if polygon else 0.0
+    if area < MIN_FLOOR_AREA:
+        raise ValueError(
+            f'footprint_coordinates enclose {area:.2f} m²; a room needs at least '
+            f'{MIN_FLOOR_AREA:g} m². Check for zero width or points on one line.'
+        )
