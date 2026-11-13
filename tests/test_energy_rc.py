@@ -79,6 +79,11 @@ def test_shared_walls_are_party_walls_without_windows():
     assert [(w.facade_id, w.bottom_m, w.top_m) for w in walls] == [('main.r0.e1', 0.0, 6.0)]
     zeroed = {(o.facade_id, o.storey) for o in building.facade.overrides if o.wwr == 0}
     assert zeroed == {('main.r0.e1', 0), ('main.r0.e1', 1)}
+    # Infiltration is per exterior area, and shared walls are not exterior (as in EnergyPlus):
+    # this 4 x 4 m, 2 x 3 m room loses 24 of its 96 m2 of walls, so 112 -> 88 m2 with the roof.
+    plain = rc.build_building(ROOM, [], CONSTRUCTIONS, 'Office', False)
+    assert building.hvac.airflow.envelope_infiltration_ach == pytest.approx(
+        plain.hvac.airflow.envelope_infiltration_ach * 88 / 112)
     open_room = jobs.energy_rc_job(request(wwr=0.4))
     shared = jobs.energy_rc_job(request(wwr=0.4, shared_floors_by_edge=[[], [1, 2], [], []]))
     assert shared['heating_energy_kwh'] < open_room['heating_energy_kwh']

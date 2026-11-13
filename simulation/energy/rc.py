@@ -254,7 +254,13 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
 
     area = footprint_area(room['footprint_coordinates'])
     perimeter = sum(math.dist(coords[i], coords[i - 1]) for i in range(len(coords)))
-    exterior = perimeter * height * floors + area  # walls (with windows) plus roof, as Honeybee counts it
+    # Infiltration is per exterior area, as Honeybee counts it: walls (with windows) plus
+    # roof. Shared walls are adiabatic in EnergyPlus, so they do not count.
+    shared = room.get('shared_floors_by_edge') or []
+    shared_wall = sum(math.dist(coords[k], coords[(k + 1) % len(coords)]) * height
+                      * len({f for f in shared[k] if 1 <= f <= floors})
+                      for k in range(min(len(shared), len(coords))))
+    exterior = perimeter * height * floors - shared_wall + area
     volume = area * height * floors
     op = reference.operation
     radiant_l, visible_l, return_l = program['lighting_fractions']
