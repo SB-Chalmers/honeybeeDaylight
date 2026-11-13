@@ -84,6 +84,13 @@ def test_job_key_ignores_fields_the_task_does_not_read():
     assert job_key('simulation.daylight', base) != job_key('simulation.energy', base)
 
 
+def test_every_task_has_a_job_key():
+    """A task missing from FIELDS only fails on the real stack (tests run Celery eagerly)."""
+    from api.jobs import FIELDS, app
+
+    assert set(FIELDS) == {name for name in app.tasks if name.startswith('simulation.')}
+
+
 def test_grasshopper_file_holds_the_request(client):
     import json
     import xml.etree.ElementTree as ET

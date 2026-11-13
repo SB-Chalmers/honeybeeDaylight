@@ -37,8 +37,12 @@ app = celery_app.app
 FIELDS = {
     'simulation.daylight': ('room', 'context_buildings', 'epw', 'pack', 'daylight'),
     'simulation.energy': ('room', 'context_buildings', 'epw', 'pack', 'energy'),
+    'simulation.energy_rc': ('room', 'context_buildings', 'epw', 'pack', 'energy'),
 }
-POLL_SECONDS = 0.1
+# How often to ask Redis whether the job is done: every 5% of the time waited so far,
+# kept between 10 and 100 ms. A fast job (EPSM RC, a small daylight room) is answered within
+# a few milliseconds of finishing, and a long EnergyPlus run is asked ten times a second.
+POLL_FRACTION, POLL_MIN_SECONDS, POLL_MAX_SECONDS = 0.05, 0.01, 0.1
 
 
 def job_key(task_name: str, payload: dict) -> str:
@@ -92,14 +96,16 @@ async def wait(job: AsyncResult, key: str | None, request: Request) -> dict:
     if key:
         _redis().incr(waiters)
         _redis().expire(waiters, app.conf.result_expires)
-    deadline = time.monotonic() + app.conf.task_time_limit + 60
+    started = time.monotonic()
+    deadline = started + app.conf.task_time_limit + 60
     try:
         while not job.ready():
             if time.monotonic() > deadline:
                 raise HTTPException(504, detail={'error': 'timeout', 'message': 'Simulation took too long.'})
             if await request.is_disconnected():
                 raise HTTPException(499, detail={'error': 'client_gone', 'message': 'Client disconnected.'})
-            await asyncio.sleep(POLL_SECONDS)
+            waited = time.monotonic() - started
+            await asyncio.sleep(min(max(POLL_FRACTION * waited, POLL_MIN_SECONDS), POLL_MAX_SECONDS))
     finally:
         if key and _redis().decr(waiters) <= 0:
             _redis().delete(waiters)

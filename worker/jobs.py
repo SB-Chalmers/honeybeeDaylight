@@ -57,6 +57,14 @@ def build(room: dict, context: list[dict]):
         raise BadInput(f'Unable to build the model from room: {exc}') from exc
 
 
+def check(room: dict) -> None:
+    """The room checks of build() without building the Honeybee model, for jobs that do not use it."""
+    try:
+        validate_room_inputs(load_room_inputs(room))
+    except Exception as exc:
+        raise BadInput(f'Unable to build the model from room: {exc}') from exc
+
+
 def _array(values, pack: bool, kind: str, decimals: int):
     """Encode a result array: packed base64 (see packing.py) or a rounded JSON list."""
     if values is None:
@@ -138,7 +146,7 @@ def energy_rc_job(request: dict) -> dict:
     pack = request.get('pack', True)
     room = request['room']
     context = request.get('context_buildings', [])
-    build(room, context)  # same geometry checks as daylight and EnergyPlus, so errors read the same
+    check(room)  # same room checks as daylight and EnergyPlus, so errors read the same
     try:
         constructions = fetch_constructions(opts['constructions'])
     except LookupError as exc:
