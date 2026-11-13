@@ -173,14 +173,34 @@ def _cardinal(azimuth_deg: float) -> str:
     return min(CARDINALS, key=lambda c: min((azimuth_deg - c[1]) % 360, (c[1] - azimuth_deg) % 360))[0]
 
 
-def _facades(room: dict, geometry) -> tuple[list, list]:
-    """Per-facade window ratios and party walls, following idf_builder's per-wall rules."""
+@lru_cache
+def _reference():
+    """Core's reference building, the source of every default the request does not set."""
+    from epsm_core import Building
+
+    return Building(preset='illustrative-reference')
+
+
+@lru_cache(maxsize=64)
+def _facade_azimuths(coords: tuple, orientation: float) -> tuple:
+    """(facade id, azimuth) per footprint edge, in edge order. Students change windows far
+    more often than the plan, so the ids Core gives a footprint are kept per worker."""
+    from epsm_core import Building, Footprint
     from epsm_core.geometry import facade_catalog
+
+    plain = Building.from_footprint(Footprint(exterior=coords), storeys=1, storey_height_m=3.0,
+                                    orientation_deg=orientation)
+    facades = sorted(facade_catalog(plain.geometry), key=lambda f: int(f.facade_id.rsplit('e', 1)[1]))
+    return tuple((f.facade_id, f.azimuth_deg) for f in facades)
+
+
+def _facades(room: dict, facades: tuple) -> tuple[list, list]:
+    """Per-facade window ratios and party walls, following idf_builder's per-wall rules."""
     from epsm_core.specs.facade import FacadeOverride
     from epsm_core.specs.geometry import PartyWall
 
-    facades = {f.facade_id: f for f in facade_catalog(geometry)}
-    edges = sorted(facades, key=lambda fid: int(fid.rsplit('e', 1)[1]))
+    azimuths = dict(facades)
+    edges = [fid for fid, _ in facades]
     edge_wwr = room.get('wwr_by_edge')
     wwr_map = room.get('wwr_by_cardinal') or {c: room.get('wwr', 0.4) for c, _ in CARDINALS}
     shared = room.get('shared_floors_by_edge') or []
@@ -190,7 +210,7 @@ def _facades(room: dict, geometry) -> tuple[list, list]:
         if edge_wwr is not None and len(edge_wwr) == len(edges):
             ratio = float(edge_wwr[k])
         else:
-            ratio = float(wwr_map.get(_cardinal(facades[fid].azimuth_deg), 0.0))
+            ratio = float(wwr_map.get(_cardinal(azimuths[fid]), 0.0))
         overrides.append(FacadeOverride(facade_id=fid, wwr=min(ratio, 0.94)))
         storeys = sorted({f for f in (shared[k] if k < len(shared) else []) if 1 <= f <= floors})
         for f in storeys:
@@ -250,7 +270,7 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
     # Heath (ladybug rotate_xy) turns the plan counter-clockwise; Core's orientation is clockwise.
     orientation = (-offset) % 360.0
     floors, height = int(room.get('floors', 1)), float(room['floor_to_floor_height'])
-    reference = Building(preset='illustrative-reference')
+    reference = _reference()
 
     area = footprint_area(room['footprint_coordinates'])
     perimeter = sum(math.dist(coords[i], coords[i - 1]) for i in range(len(coords)))
@@ -299,7 +319,11 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
         latent_recovery_effectiveness=0.0,
     )
     overhang = float(room.get('wall_thickness', 0.30)) + float(room.get('additional_horizontal_shading_depth', 0.0))
-    common = dict(
+    overrides, party_walls = _facades(room, _facade_azimuths(tuple(coords), orientation))
+    facade = _changed(reference.facade, default_wwr=min(float(room.get('wwr', 0.4) or 0.0), 0.94),
+                      overrides=tuple(overrides), overhang=OverhangSpec(depth_m=overhang))
+    return Building.from_footprint(
+        Footprint(exterior=tuple(coords)), facade=facade, party_walls=tuple(party_walls),
         storeys=floors, storey_height_m=height, orientation_deg=orientation, identifier='heath',
         construction_set=_construction_set(constructions, reference),
         hvac=reference.hvac.with_changes(airflow=airflow), operation=operation,
@@ -309,23 +333,15 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
         thermal_bridge_uplift_fraction=0.0, load_reference_area_policy='conditioned_floor_area',
         context=_context(context_buildings, offset),
     )
-    footprint = Footprint(exterior=tuple(coords))
-    plain = Building.from_footprint(footprint, **common)
-    overrides, party_walls = _facades(room, plain.geometry)
-    facade = _changed(reference.facade, default_wwr=float(room.get('wwr', 0.4) or 0.0),
-                      overrides=tuple(overrides), overhang=OverhangSpec(depth_m=overhang))
-    return Building.from_footprint(footprint, facade=facade, party_walls=tuple(party_walls), **common)
 
 
 def run_energy_rc(room: dict, context_buildings: list[dict], constructions: dict, building_program: str,
                   natural_ventilation: bool, epw_path: str) -> dict:
     """Same keys and units as simulate.run_energy (kWh, kWh/m2, monthly kWh/m2)."""
-    from epsm_core import Weather
     from epsm_rc import simulate_building
 
     building = build_building(room, context_buildings, constructions, building_program, natural_ventilation)
-    weather = Weather.from_epw(epw_path)
-    result = simulate_building(building, weather=weather, settings=_settings(), preparation_cache=_cache())
+    result = simulate_building(building, weather=_weather(epw_path), settings=_settings(), preparation_cache=_cache())
     hourly = {k: np.asarray(v, dtype=float) for k, v in result.hourly.items()}
     year = int(result.time_axis[0].astype('datetime64[Y]').astype(int) + 1970)
     month = result.time_axis.astype('datetime64[M]').astype(int) % 12
@@ -375,6 +391,15 @@ def run_energy_rc(room: dict, context_buildings: list[dict], constructions: dict
         'heating_hourly_kwh': terms['heating'].tolist(),
         'cooling_hourly_kwh': terms['cooling'].tolist(),
     }
+
+
+@lru_cache(maxsize=4)
+def _weather(epw_path: str):
+    """Core's Weather for an EPW, kept per worker so the default file is opened once.
+    (EPSM still checks the file's checksum on every run.)"""
+    from epsm_core import Weather
+
+    return Weather.from_epw(epw_path)
 
 
 @lru_cache(maxsize=8)

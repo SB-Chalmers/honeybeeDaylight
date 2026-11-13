@@ -44,6 +44,11 @@ def test_result_has_the_energyplus_shape():
     assert len(plain['heating_hourly_kwh']) == 8760
 
 
+def test_fully_glazed_walls_run():
+    """EPSM keeps an opaque frame, so a ratio of 1 runs as 0.94 instead of failing."""
+    assert jobs.energy_rc_job(request(wwr=1.0))['heating_energy_kwh'] > 0
+
+
 def test_natural_ventilation_turns_cooling_off():
     req = request(wwr=0.6)
     req['energy']['natural_ventilation'] = True
