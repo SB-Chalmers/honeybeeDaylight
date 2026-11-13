@@ -44,6 +44,8 @@ app.conf.update(
     task_routes={
         'simulation.daylight': {'queue': 'daylight'},
         'simulation.energy': {'queue': 'energy'},
+        # RC runs in about 0.1 s, so it shares the CPU queue with EnergyPlus.
+        'simulation.energy_rc': {'queue': 'energy'},
     },
 )
 
@@ -78,3 +80,11 @@ def energy(request: dict) -> dict:
     from .jobs import energy_job
 
     return _run(energy_job, request)
+
+
+@app.task(name='simulation.energy_rc')
+def energy_rc(request: dict) -> dict:
+    """Celery task on the "energy" (CPU) queue: the energy job on EPSM RC."""
+    from .jobs import energy_rc_job
+
+    return _run(energy_rc_job, request)

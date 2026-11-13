@@ -34,6 +34,7 @@ service and Foton runs on the CPU (much slower).
 |---|---|---|
 | `POST` | `/v1/daylight` | Daylight factor per sensor, plus DA/sDA when `daylight.run_sda` is true |
 | `POST` | `/v1/energy` | Annual heating/cooling/total, monthly heat balance, hourly heating and cooling |
+| `POST` | `/v1/energy-rc` | The same request and response, computed with EPSM RC (ISO 52016-1) in about 0.1 s; see [EPSM RC energy](#epsm-rc-energy) |
 | `POST` | `/v1/simulate` | Both, in parallel |
 | `POST` | `/v1/grasshopper` | The request as a Grasshopper file (`heath.ghx`) that rebuilds the same model; see [grasshopper/README.md](grasshopper/README.md) |
 | `GET` | `/health` | Liveness (no key needed) |
@@ -255,3 +256,29 @@ buildings, each student waiting 5 to 30 s between requests):
   for `api` + `redis` + `energy`, with GPU instances for `daylight` started only for class hours.
   Put HTTPS in front (a load balancer or Caddy/nginx) so API keys are not sent in the clear.
 - **Bigger classes:** the queue length (`llen daylight`) tells you when to add workers.
+
+## EPSM RC energy
+
+`POST /v1/energy-rc` takes the `/v1/energy` request and returns the same result,
+computed with [EPSM RC](https://github.com/SB-Chalmers/epsm_rc) (ISO 52016-1 hourly
+model) instead of EnergyPlus. `simulation/energy/rc.py` builds the same building
+EnergyPlus gets:
+- footprint, storeys, orientation;
+- per-facade window ratio, with shared walls as adiabatic party walls;
+- the overhang, and context buildings;
+- the EPSM constructions and the Honeybee program's loads and schedules;
+- ideal air, and natural ventilation.
+
+Window fins are not modelled. A run takes about 0.1 s, against 2 to 4 s for EnergyPlus.
+
+On 24 test buildings in Göteborg, against `/v1/energy`:
+- **Monthly heating** is within ±1 kWh/m² in 76% of months (mean miss 0.7 kWh/m²).
+- **Monthly cooling** is within ±1 kWh/m² in 84% of months (mean miss 0.5 kWh/m²).
+- **Design changes** (glazing, insulation, windows, rotation, overhangs, neighbours,
+  natural ventilation) move heating and cooling in the same direction as EnergyPlus.
+
+RC over-predicts heating more the colder the climate; EnergyPlus's dynamic window
+films lose less heat than ISO's fixed coefficients.
+
+The EPSM packages are pinned in `requirements-epsm.txt` and built into wheels in the
+Dockerfile's first stage (epsm_rc needs Rust).

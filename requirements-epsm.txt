@@ -1,0 +1,7 @@
+# EPSM packages for POST /v1/energy-rc (EPSM RC on an EPSM Core Building).
+# Built into wheels in the Dockerfile's epsm stage; epsm_rc needs Rust to build.
+# epsm_rc is pinned to the commit with overhang shading (SB-Chalmers/epsm_rc#89) and the
+# sky-diffuse context option (#90); move it to the release tag once those are released.
+epsm_data @ git+https://github.com/SB-Chalmers/epsm_data@v0.7.0
+epsm_core @ git+https://github.com/SB-Chalmers/epsm_core@v0.9.1
+epsm_rc[platform] @ git+https://github.com/SB-Chalmers/epsm_rc@cdeceb335f6bdf5f93c3a2028fb2fb6e7d8b2eb9
