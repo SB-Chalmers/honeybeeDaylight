@@ -3,6 +3,7 @@ api.routes
 ──────────
   POST /v1/daylight   daylight only (DF, optional DA/sDA)
   POST /v1/energy     energy only (annual totals, monthly balance, hourly loads)
+  POST /v1/energy-rc  the same request and result, computed with EPSM RC (ISO 52016-1)
   POST /v1/simulate   both, run at the same time
   POST /v1/grasshopper the same request as a Grasshopper definition (.ghx)
 
@@ -56,6 +57,17 @@ async def daylight(body: DaylightRequest, request: Request):
 async def energy(body: EnergyRequest, request: Request):
     """Annual heating/cooling, monthly heat balance and hourly loads."""
     return await wait(*submit(celery_app.energy, _payload(body)), request)
+
+
+@router.post('/energy-rc', response_model=EnergyResult, responses=_ERRORS)
+async def energy_rc(body: EnergyRequest, request: Request):
+    """/v1/energy computed with EPSM RC (ISO 52016-1 hourly model) instead of EnergyPlus.
+
+    Same request and response. RC answers in about 0.1 s against 2 to 4 s; heating
+    and cooling follow EnergyPlus closely month by month, with the same direction of
+    change for every design input. Window fins are not modelled.
+    """
+    return await wait(*submit(celery_app.energy_rc, _payload(body)), request)
 
 
 @router.post('/simulate', response_model=SimulateResult, responses=_ERRORS)

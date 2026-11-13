@@ -127,3 +127,34 @@ def energy_job(request: dict) -> dict:
     for key in ('heating_hourly_kwh', 'cooling_hourly_kwh'):
         result[key] = _array(result.get(key), pack, 'series', 4)
     return {'weather': weather, 'seconds': round(time.perf_counter() - started, 3), **result}
+
+
+def energy_rc_job(request: dict) -> dict:
+    """The energy job on EPSM RC (ISO 52016-1) instead of EnergyPlus; same request and result."""
+    from simulation.energy.rc import run_energy_rc
+
+    started = time.perf_counter()
+    opts = request['energy']
+    pack = request.get('pack', True)
+    room = request['room']
+    context = request.get('context_buildings', [])
+    build(room, context)  # same geometry checks as daylight and EnergyPlus, so errors read the same
+    try:
+        constructions = fetch_constructions(opts['constructions'])
+    except LookupError as exc:
+        raise BadInput(str(exc)) from exc
+    with tempfile.TemporaryDirectory(prefix='energy_rc_') as folder:
+        epw_path, weather = _weather(request.get('epw'), folder)
+        try:
+            result = run_energy_rc(
+                room, context, constructions,
+                opts.get('building_program', 'Office'),
+                opts.get('natural_ventilation', False),
+                epw_path,
+            )
+        except ValueError as exc:
+            # EPSM rejects inputs it cannot model (for example an unreadable EPW) before solving.
+            raise BadInput(f'EPSM RC cannot model this request: {exc}') from exc
+    for key in ('heating_hourly_kwh', 'cooling_hourly_kwh'):
+        result[key] = _array(result.get(key), pack, 'series', 4)
+    return {'weather': weather, 'seconds': round(time.perf_counter() - started, 3), **result}
