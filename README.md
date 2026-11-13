@@ -265,7 +265,8 @@ model) instead of EnergyPlus. `simulation/energy/rc.py` builds the same building
 EnergyPlus gets:
 - footprint, storeys, orientation;
 - per-facade window ratio, with shared walls as adiabatic party walls;
-- the overhang, and context buildings;
+- the overhang, context buildings, and the building's own wings shading each other
+  (L, U and courtyard plans);
 - the EPSM constructions and the Honeybee program's loads and schedules;
 - ideal air, and natural ventilation.
 
