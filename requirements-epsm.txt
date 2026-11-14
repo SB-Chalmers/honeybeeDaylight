@@ -1,5 +1,6 @@
 # EPSM packages for POST /v1/energy-rc (EPSM RC on an EPSM Core Building).
-# Built into wheels in the Dockerfile's epsm stage; epsm_rc needs Rust to build.
-epsm_data @ git+https://github.com/SB-Chalmers/epsm_data@v0.7.0
-epsm_core @ git+https://github.com/SB-Chalmers/epsm_core@v0.10.2
-epsm_rc[platform] @ git+https://github.com/SB-Chalmers/epsm_rc@v0.12.2
+# epsm_rc is the prebuilt Linux wheel from its GitHub release (it has a Rust extension),
+# so the image needs neither Rust nor git.
+epsm_data @ https://github.com/SB-Chalmers/epsm_data/archive/refs/tags/v0.7.0.tar.gz
+epsm_core @ https://github.com/SB-Chalmers/epsm_core/archive/refs/tags/v0.10.2.tar.gz
+epsm_rc[platform] @ https://github.com/SB-Chalmers/epsm_rc/releases/download/v0.12.2/epsm_rc-0.12.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl

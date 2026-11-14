@@ -183,7 +183,7 @@ driver and Docker upgrades for a quiet day, not during a course.
 
 ```bash
 python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r requirements-epsm.txt pytest   # EPSM needs Rust (rustup.rs)
+pip install -r requirements.txt -r requirements-epsm.txt pytest   # EPSM RC wheel: Linux x86-64 only
 FOTON_BACKEND=reference pytest tests/
 ```
 
@@ -251,5 +251,6 @@ On 24 test buildings in Göteborg, against `/v1/energy`:
 RC over-predicts heating more the colder the climate; EnergyPlus's dynamic window
 films lose less heat than ISO's fixed coefficients.
 
-The EPSM packages are pinned in `requirements-epsm.txt` and built into wheels in the
-Dockerfile's first stage (epsm_rc needs Rust).
+The EPSM packages are pinned in `requirements-epsm.txt`. epsm_rc comes as the prebuilt
+Linux wheel attached to its GitHub release, so building the image needs no Rust; on
+another platform, install epsm_rc from source (`pip install git+https://github.com/SB-Chalmers/epsm_rc@v0.12.2`, needs Rust).
