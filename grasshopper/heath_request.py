@@ -33,7 +33,7 @@ tests/test_grasshopper.py checks it against the backend.
 import json
 
 EPSM_URL = 'https://epsm.chalmers.se'
-DEFAULT_EPW_URL = ('https://raw.githubusercontent.com/SB-Chalmers/honeybeeDaylight/'
+DEFAULT_EPW_URL = ('https://raw.githubusercontent.com/SB-Chalmers/ace-sim-api/'
                    'main/weather/gothenburg_tmyx.epw')
 
 # Heath building_program -> honeybee-energy program type (idf_builder.PROGRAMS).

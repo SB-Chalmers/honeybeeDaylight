@@ -147,7 +147,7 @@ once per machine.
 3. **Clone and configure:**
 
    ```bash
-   git clone https://github.com/SB-Chalmers/honeybeeDaylight.git && cd honeybeeDaylight
+   git clone https://github.com/SB-Chalmers/ace-sim-api.git && cd ace-sim-api
    cp .env.example .env && chmod 600 .env
    ```
 
