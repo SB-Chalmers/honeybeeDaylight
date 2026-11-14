@@ -11,7 +11,6 @@ import os
 import re
 
 import numpy as np
-import foton
 from foton import Engine
 from foton.honeybee import HoneybeeStudy
 
@@ -28,7 +27,7 @@ def _backend() -> str:
 # - Without one, every study loads and unloads the NVIDIA Vulkan driver, and after
 #   about 12 jobs glibc runs out of static TLS for libnvidia-tls and every later
 #   job fails with "Unable to find a Vulkan driver".
-# - Every study also uses it. Creating a Vulkan engine takes about 130 ms, most of
+# - Every study reuses it (HoneybeeStudy engine=). Creating a Vulkan engine takes about 130 ms, most of
 #   a preview job, and the driver serialises it across processes: with 8 daylight
 #   workers busy it took about 0.9 s per job (profiled on the Precision 7540).
 _ENGINES: dict[str, Engine] = {}
@@ -38,25 +37,6 @@ def _engine(backend: str) -> Engine:
     if backend not in _ENGINES:
         _ENGINES[backend] = Engine({'backend': backend})
     return _ENGINES[backend]
-
-
-def _study(model, backend: str, **options) -> HoneybeeStudy:
-    """A HoneybeeStudy that uses this process's engine instead of creating one.
-
-    HoneybeeStudy takes no engine argument and calls ``foton.Engine`` itself, so
-    that name points at the shared engine while the study is set up. A worker
-    process runs one job at a time, so nothing else sees the swap.
-    """
-    engine, expected, original = _engine(backend), {'backend': backend}, foton.Engine
-
-    def shared(config):
-        return engine if config == expected else original(config)
-
-    foton.Engine = shared
-    try:
-        return HoneybeeStudy(model, backend=backend, **options)
-    finally:
-        foton.Engine = original
 
 
 def _floor_number(room_identifier: str) -> int | None:
@@ -87,7 +67,7 @@ def run_daylight(
     backend = _backend()
     # check=False: the model is built in code from validated input, so Foton's
     # check_all / defensive copy / to_dict fingerprint (most of prepare time) are skipped.
-    study = _study(model, backend, weather_memo=weather_memo, check=False)
+    study = HoneybeeStudy(model, engine=_engine(backend), weather_memo=weather_memo, check=False)
     positions = np.asarray(study.prepared.arrays['sensor_positions'], dtype=np.float32)
 
     df_run = study.daylight_factor(quality=quality)
