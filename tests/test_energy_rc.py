@@ -49,6 +49,12 @@ def test_fully_glazed_walls_run():
     assert jobs.energy_rc_job(request(wwr=1.0))['heating_energy_kwh'] > 0
 
 
+def test_l_shaped_footprint_runs():
+    """epsm_rc 0.12.2 shades the building's own wings, so concave plans run instead of a 400."""
+    l_shape = [[0, 0], [10, 0], [10, 6], [6, 6], [6, 14], [0, 14]]
+    assert jobs.energy_rc_job(request(footprint_coordinates=l_shape))['heating_energy_kwh'] > 0
+
+
 def test_natural_ventilation_turns_cooling_off():
     req = request(wwr=0.6)
     req['energy']['natural_ventilation'] = True
