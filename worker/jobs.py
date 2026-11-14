@@ -23,8 +23,7 @@ from simulation.inputs import GRID_DIM, load_room_inputs, validate_room_inputs
 from simulation.model import build_model
 from simulation.runner import df_summary, run_daylight, sda_summary
 
-WEATHER_DIR = Path(os.environ.get('WEATHER_DIR', Path(__file__).resolve().parent.parent / 'weather'))
-DEFAULT_EPW = WEATHER_DIR / os.environ.get('DEFAULT_EPW', 'gothenburg_tmyx.epw')
+DEFAULT_EPW = Path(__file__).resolve().parent.parent / 'weather' / 'gothenburg_tmyx.epw'
 
 # Sky matrices for the default EPW are computed once per worker process and
 # reused. Uploaded EPWs are not memoised, so memory does not grow with uploads.

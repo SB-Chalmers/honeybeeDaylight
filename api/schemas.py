@@ -1,11 +1,11 @@
 """
 api.schemas
 ───────────
-Request and response models for /v1/daylight, /v1/energy and /v1/simulate.
+Request and response models for every /v1 endpoint.
 
 The request is a compact building description; the server rebuilds the
 Honeybee model from it. Large result arrays are returned packed (base64
-typed arrays, see ``api.packing``) unless the client asks for plain JSON.
+typed arrays, see ``worker.packing``) unless the client asks for plain JSON.
 """
 
 from __future__ import annotations

@@ -38,8 +38,9 @@ app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     task_track_started=True,
-    task_time_limit=int(os.environ.get('TASK_TIME_LIMIT_SECONDS', '1200')),
-    worker_max_tasks_per_child=int(os.environ.get('WORKER_MAX_TASKS_PER_CHILD', '200')),
+    task_time_limit=1200,
+    # Replace a worker process after 200 jobs, so a slow leak cannot build up during a class.
+    worker_max_tasks_per_child=200,
     broker_connection_retry_on_startup=True,
     task_routes={
         'simulation.daylight': {'queue': 'daylight'},

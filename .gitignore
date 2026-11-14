@@ -1,38 +1,14 @@
 # Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
-
-# Virtual environment
 .venv/
-venv/
-env/
+.pytest_cache/
 
-# Simulation outputs (generated per-run, not source)
-annual_daylight_sim/
-daylight_factor_sim/
-studies/
-
-# Ladybug / Radiance artifacts
-*.oct
-*.ill
-*.res
-*.amb
-
-# OS
+# OS / editor
 .DS_Store
-Thumbs.db
-
-# Editor
 .vscode/
 .idea/
 
-# Local study database and runtime data
-data/
-
-# Local secrets (APP_KEYS etc.)
+# Local secrets (APP_KEYS etc.) and stress-test output
 .env
-dump.rdb
 report.html

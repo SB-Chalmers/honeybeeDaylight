@@ -5,8 +5,8 @@
 #
 # Worker counts follow the hardware (worker/concurrency.py): one process per
 # physical core for each queue (a daylight job is almost all CPU setup).
-# Worker processes are replaced after 200 jobs (WORKER_MAX_TASKS_PER_CHILD in
-# worker/celery_app.py), so a slow leak cannot build up during a long class.
+# Worker processes are replaced after 200 jobs (worker/celery_app.py), so a
+# slow leak cannot build up during a long class.
 
 x-app: &app
   build: .
@@ -29,7 +29,7 @@ services:
 
   api:
     <<: *app
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers ${API_WORKERS:-2}
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
     ports: ["8000:8000"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]

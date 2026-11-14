@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 
 EPLUS_BINARY = os.environ.get('EPLUS_BINARY', 'energyplus')
-EPLUS_TIMEOUT = int(os.environ.get('EPLUS_TIMEOUT_SECONDS', '600'))
+EPLUS_TIMEOUT = 600  # seconds
 
 
 def run_local_eplus(idf_path: str, epw_path: str, sim_dir: str, multipliers: dict | None = None) -> dict:

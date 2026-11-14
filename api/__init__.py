@@ -1,1 +1,1 @@
-"""HTTP layer: validates and signs requests, queues jobs, returns results."""
+"""HTTP layer: checks API keys, validates requests, queues jobs, returns results."""

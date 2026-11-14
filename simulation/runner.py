@@ -135,7 +135,6 @@ def run_daylight(
         'points': positions[order],
         'df': df,
         'da': da,
-        'timings': {'df': df_run.timings.get('total_seconds')},
     }
 
 

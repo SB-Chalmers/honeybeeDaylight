@@ -1,31 +1,12 @@
-# Git / editor
+# Only api/, worker/, simulation/, weather/ and grasshopper/ go into the image.
 .git/
-.gitignore
-*.md
-
-# Python
+.github/
 .venv/
 __pycache__/
 *.pyc
-*.pyo
 .pytest_cache/
-
-# Simulation outputs (generated at runtime, not source)
-studies/
-annual_daylight_sim/
-daylight_factor_sim/
-
-# Database (generated at runtime)
-data/
-
-# Test suite
+*.md
 tests/
-
-# Dev scripts
 scripts/
-
-# Misc
-.DS_Store
-*.png
-*.jpg
 .env
+.DS_Store
