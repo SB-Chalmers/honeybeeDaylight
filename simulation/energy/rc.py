@@ -120,13 +120,6 @@ def _schedule(profiles):
     return ScheduleSpec(values=tuple(profiles[0]), weekday_values=tuple(tuple(d) for d in profiles))
 
 
-def _changed(obj, **fields):
-    """Validated copy with some fields replaced."""
-    if hasattr(obj, 'with_changes'):
-        return obj.with_changes(**fields)
-    return obj.updated(**fields)
-
-
 def _element(name, role, layers):
     """A Data Element from (name, thickness, conductivity, density, specific heat) layers, outside first."""
     from epsm_data import Component, Element, Layer, LayerMaterial, LayerSlot, OpaqueMaterial, Roughness, ShearingLayer
@@ -285,8 +278,7 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
     op = reference.operation
     radiant_l, visible_l, return_l = program['lighting_fractions']
     radiant_e, latent_e, lost_e = program['equipment_fractions']
-    operation = _changed(
-        op,
+    operation = op.updated(
         occupancy_category='residential' if building_program == 'Residential' else 'non_residential',
         occupant_density_per_m2=program['people_per_m2'],
         occupant_activity_w=program['activity_w'],
@@ -300,16 +292,15 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
         cooling_setpoint=_schedule(program['cooling_setpoint']),
         cooling_enabled=not natural_ventilation,
         dhw_kwh_m2_year=0.0,
-        gain_partitions=_changed(
-            op.gain_partitions, policy='explicit',
+        gain_partitions=op.gain_partitions.updated(
+            policy='explicit',
             people_fraction_radiant=program['people_radiant'],
             people_sensible_heat_fraction=_sensible_fraction(program['activity_w']),
             equipment_fraction_radiant=radiant_e, equipment_fraction_latent=latent_e,
             lighting_fraction_radiant=radiant_l, lighting_fraction_visible=visible_l,
             lighting_return_air_fraction=return_l),
     )
-    airflow = _changed(
-        reference.hvac.airflow,
+    airflow = reference.hvac.airflow.updated(
         topology='FTX',  # balanced supply carries the ideal loads' outdoor air; no recovery
         envelope_infiltration_ach=program['infiltration_per_exterior_m2'] * exterior * 3600 / volume,
         infiltration_fraction=_schedule(program['infiltration']),
@@ -320,8 +311,8 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
     )
     overhang = float(room.get('wall_thickness', 0.30)) + float(room.get('additional_horizontal_shading_depth', 0.0))
     overrides, party_walls = _facades(room, _facade_azimuths(tuple(coords), orientation))
-    facade = _changed(reference.facade, default_wwr=min(float(room.get('wwr', 0.4) or 0.0), 0.94),
-                      overrides=tuple(overrides), overhang=OverhangSpec(depth_m=overhang))
+    facade = reference.facade.updated(default_wwr=min(float(room.get('wwr', 0.4) or 0.0), 0.94),
+                                      overrides=tuple(overrides), overhang=OverhangSpec(depth_m=overhang))
     return Building.from_footprint(
         Footprint(exterior=tuple(coords)), facade=facade, party_walls=tuple(party_walls),
         storeys=floors, storey_height_m=height, orientation_deg=orientation, identifier='heath',
@@ -353,8 +344,7 @@ def run_energy_rc(room: dict, context_buildings: list[dict], constructions: dict
     floors, height = int(room.get('floors', 1)), float(room['floor_to_floor_height'])
     area = footprint_area(room['footprint_coordinates']) * floors
     volume = area * height
-    windows = [e for e in building.elements.values() if 'WINDOW' in str(e.role)] \
-        if isinstance(building.elements, dict) else [e for e in building.elements if 'WINDOW' in str(e.role)]
+    windows = [e for e in building.elements if 'WINDOW' in str(e.role)]
     window_ua = sum(e.area_m2 * float(e.construction.u_value) for e in windows if e.boundary == 'Outdoors')
 
     outdoor = np.asarray(_outdoor_temperature(epw_path))[:month.size]

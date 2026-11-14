@@ -1,7 +1,7 @@
 """Look up construction and material records from the external EPSM service.
 
 EPSM is served separately (``EPSM_BASE_URL``); this backend only reads its
-catalogue. Each worker process caches the catalogue for ``EPSM_CACHE_SECONDS``
+catalogue. Each worker process caches the catalogue for ``CACHE_SECONDS``
 so a burst of jobs does not refetch it every time.
 """
 
@@ -14,7 +14,7 @@ import time
 import httpx
 
 EPSM_BASE = os.environ.get('EPSM_BASE_URL', 'https://epsm.chalmers.se').rstrip('/')
-CACHE_SECONDS = float(os.environ.get('EPSM_CACHE_SECONDS', '600'))
+CACHE_SECONDS = 600
 
 _cache: dict = {'at': 0.0, 'constructions': None, 'materials': None}
 _lock = threading.Lock()

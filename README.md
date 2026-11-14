@@ -1,13 +1,13 @@
 # Simulation Service
 
 Send a compact building description and get daylight (Foton) and energy
-(EnergyPlus) results back. The service is stateless: it rebuilds the Honeybee
+(EnergyPlus or EPSM RC) results back. The service is stateless: it rebuilds the Honeybee
 model, runs the simulations in temporary folders, answers, and forgets.
 Storing results is the client application's job.
 
 ```
-client ──HTTPS──▶ api (FastAPI) ──▶ Redis queue ──▶ daylight worker (Foton, GPU, 1 job at a time)
-                     ▲                         └──▶ energy worker  (EnergyPlus, CPU, 1 job per core)
+client ──HTTPS──▶ api (FastAPI) ──▶ Redis queue ──▶ daylight worker (Foton on the GPU, 1 job per core)
+                     ▲                         └──▶ energy worker   (EnergyPlus or EPSM RC, 1 job per core)
                      └──────── result (kept in Redis for 10 min, then gone)
 ```
 
@@ -183,9 +183,11 @@ driver and Docker upgrades for a quiet day, not during a course.
 
 ```bash
 python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt pytest
+pip install -r requirements.txt -r requirements-epsm.txt pytest   # EPSM needs Rust (rustup.rs)
 FOTON_BACKEND=reference pytest tests/
 ```
+
+The EnergyPlus test runs only when `energyplus` is on `PATH`.
 
 To run the stack without Docker: start `redis-server`, then
 `celery -A worker.celery_app worker -Q daylight,energy` (on macOS add
@@ -196,66 +198,34 @@ To run the stack without Docker: start `redis-server`, then
 ## Capacity
 
 Worker counts are chosen at startup by `worker/concurrency.py`: one process per
-physical core for each queue. A daylight `preview` job is about 99% CPU work
-(rebuilding, checking and meshing the Honeybee model) and 1% GPU tracing, so
-the GPU is never the bottleneck; the number of daylight processes is. Numbers
-below are from the Precision 7540 (i9-9880H with 8 cores, Quadro RTX 3000)
-with the earlier setting of two daylight processes:
+physical core for each queue. A daylight job is almost all CPU work (rebuilding
+and meshing the Honeybee model), so the GPU is not the limit; the cores are.
+Each EnergyPlus run needs about 200 MB of memory. Leave `cpus:`/`mem_limit:` out
+of the compose file; if you do limit CPUs, the workers see it and run fewer processes.
 
-| Load (clients sending back to back) | Requests/min | Median | p95 |
-|---|---|---|---|
-| 4 clients, `/v1/simulate` | 62 | 3.8 s | 5.0 s |
-| 24 clients, daylight `preview` | 124 | 10.9 s | 13.0 s |
-| 12 clients, daylight `final` | 46 | 15.2 s | 16.6 s |
-| 24 clients, energy | 148 | 9.4 s | 10.6 s |
-| 24 clients, daylight + energy + simulate | 121 | 11.7 s | 16.3 s |
+Measured 2026-11-14 on the Precision 7540 (i9-9880H, 8 cores, Quadro RTX 3000):
+24 clients for 5 minutes, each sending a random building to `/v1/daylight` and
+`/v1/energy-rc` at the same time and waiting for both: 872 runs a minute, median
+1.1 s, p95 1.6 s, no errors in 8,736 calls. The energy workers were 95% busy and
+the GPU 27%. With EnergyPlus (`/v1/energy`) instead of EPSM RC, the same machine
+managed 145 runs a minute at a median of 9.3 s (2026-11-12).
 
-Under a full class the time is mostly queueing; one request on an idle
-machine takes about 1 s (daylight `preview`) or 2 s (energy).
+One request on an idle machine takes about 0.5 s (daylight `preview`), 0.15 s
+(EPSM RC) or 2.5 s (EnergyPlus).
 
-Three things keep the queues short (`api/jobs.py`):
+Two things keep the queues short (`api/jobs.py`):
 
 - **Identical requests share one job.** The job is keyed by a hash of the fields
-  it reads, so a repeated request, or the daylight half of `/v1/simulate` when
-  only the energy options changed, reuses a queued, running or finished job.
+  it reads, so a repeated request reuses a queued, running or finished job.
   Results stay for `RESULT_TTL_SECONDS`.
 - **Abandoned jobs are cancelled.** When every client waiting for a job has
   disconnected before it starts, the job is revoked and never runs.
-- **Energy need not wait for daylight.** `/v1/simulate` answers when both are
-  done. A client that wants energy as soon as it is ready calls `/v1/daylight`
-  and `/v1/energy` at the same time.
 
-Measured 2026-11-04 on a 4-core cloud machine (energy only, 1 to 5 storey
-buildings, each student waiting 5 to 30 s between requests):
+`/v1/simulate` answers when both daylight and energy are done. To show each as
+soon as it is ready, call `/v1/daylight` and `/v1/energy-rc` at the same time.
 
-| Students | Median | p95 | Requests/min |
-|---|---|---|---|
-| 20 | 2.5 s | 10 s | 60 |
-| 40 | 4.3 s | 14 s | 113 |
-| 80 | 23 s | 34 s | 136 (saturated) |
-
-- **Energy** scales with cores: about 34 runs per minute per core, which is
-  roughly **10 active students per core**. Running more workers than cores
-  only adds waiting.
-- **Daylight** is limited by the GPU: about 125 `preview` or 46 `final`
-  requests per minute on the Quadro RTX 3000.
-- **Docker** on Linux gives containers every core and all memory unless
-  limits are set, so leave `cpus:`/`mem_limit:` out of the compose file. If you
-  do limit CPUs with `--cpus`, the energy worker sees the limit and runs
-  fewer processes. Each EnergyPlus run needs
-  about 200 MB of memory. Docker Desktop (macOS/Windows) runs in a VM with its
-  own CPU and memory limits (Settings → Resources).
-
-## Scaling later
-
-- **More GPUs in one machine:** run one `daylight` worker per GPU, each limited to its own device.
-- **More machines:** start `daylight`/`energy` workers on any host that can reach Redis.
-  Nothing else changes. Keep Redis private (firewall or a password in `REDIS_URL`).
-- **Cloud (e.g. AWS EC2):** a `g5`/`g6` instance (NVIDIA A10G/L4) runs this compose file
-  as is with the NVIDIA Container Toolkit. A cheaper pattern is a small always-on instance
-  for `api` + `redis` + `energy`, with GPU instances for `daylight` started only for class hours.
-  Put HTTPS in front (a load balancer or Caddy/nginx) so API keys are not sent in the clear.
-- **Bigger classes:** the queue length (`llen daylight`) tells you when to add workers.
+More machines can join by starting `daylight`/`energy` workers against the same
+Redis (keep Redis private). The queue length (`llen daylight`) tells you when.
 
 ## EPSM RC energy
 
