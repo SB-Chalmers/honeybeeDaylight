@@ -8,7 +8,7 @@ Covers: room geometry from footprint, orientation, floor elevation,
 
 import pytest
 
-from simulation.inputs import load_room_inputs
+from tests import simulation_room
 from ladybug_geometry.geometry3d.pointvector import Point3D
 from simulation.model import build_model
 
@@ -28,7 +28,7 @@ RECT_8x6 = {
 
 
 def cfg(**overrides):
-    c = load_room_inputs(RECT_8x6)
+    c = simulation_room(**RECT_8x6)
     for k, v in overrides.items():
         if isinstance(v, dict) and isinstance(c.get(k), dict):
             c[k].update(v)
@@ -41,7 +41,7 @@ def cfg(**overrides):
 
 class TestRoomGeometry:
     def test_returns_model_and_grid(self):
-        model, grid = build_model(cfg())
+        model, (grid,) = build_model(cfg())
         assert model is not None
         assert grid is not None
 
@@ -144,7 +144,7 @@ class TestWWR:
         assert all(len(w.apertures) == 0 for w in walls)
 
     def test_sensor_grid_is_registered_to_room(self):
-        model, grid = build_model(cfg())
+        model, (grid,) = build_model(cfg())
         assert grid.room_identifier == model.rooms[0].identifier
 
 
@@ -178,8 +178,8 @@ class TestShading:
 
 class TestSensorGrid:
     def test_sensor_count_scales_with_footprint(self):
-        _, grid_small = build_model(cfg(**{'footprint_coordinates': [[0,0],[4,0],[4,4],[0,4]]}))
-        _, grid_large = build_model(cfg(**{'footprint_coordinates': [[0,0],[8,0],[8,8],[0,8]]}))
+        _, (grid_small,) = build_model(cfg(**{'footprint_coordinates': [[0,0],[4,0],[4,4],[0,4]]}))
+        _, (grid_large,) = build_model(cfg(**{'footprint_coordinates': [[0,0],[8,0],[8,8],[0,8]]}))
         assert grid_large.count > grid_small.count
 
     def test_grid_tiles_the_footprint_also_when_rotated(self):
@@ -187,7 +187,7 @@ class TestSensorGrid:
         world-aligned mesh_grid lost about a fifth of them on rotated buildings)."""
         footprint = [[0, 0], [10, 0], [10, 6], [4, 6], [4, 9], [0, 9]]  # L shape, 72 m2
         for angle in (0.0, 37.0):
-            model, grid = build_model(cfg(footprint_coordinates=footprint, orientation_offset=angle))
+            model, (grid,) = build_model(cfg(footprint_coordinates=footprint, orientation_offset=angle))
             assert grid.count == 288
             assert all(abs(s.pos[2] - 0.75) < 1e-9 for s in grid.sensors)
             assert all(s.dir == (0.0, 0.0, 1.0) for s in grid.sensors)
@@ -196,8 +196,8 @@ class TestSensorGrid:
             assert all(floor.is_point_on_face(Point3D(s.pos[0], s.pos[1], 0.0), 1e-6) for s in grid.sensors)
 
     def test_coarser_grid_has_fewer_sensors(self):
-        _, grid_fine   = build_model(cfg(**{'sensor_grid': {'x_dim': 0.5, 'y_dim': 0.5, 'offset': 0.75}}))
-        _, grid_coarse = build_model(cfg(**{'sensor_grid': {'x_dim': 1.0, 'y_dim': 1.0, 'offset': 0.75}}))
+        _, (grid_fine,) = build_model(cfg(**{'sensor_grid': {'x_dim': 0.5, 'y_dim': 0.5, 'offset': 0.75}}))
+        _, (grid_coarse,) = build_model(cfg(**{'sensor_grid': {'x_dim': 1.0, 'y_dim': 1.0, 'offset': 0.75}}))
         assert grid_coarse.count < grid_fine.count
 
 

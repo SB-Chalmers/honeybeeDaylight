@@ -72,6 +72,15 @@ def test_validation_error_is_422(client):
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize('path', ['/v1/daylight', '/v1/energy', '/v1/energy-rc', '/v1/grasshopper'])
+def test_impossible_geometry_is_422_on_every_endpoint(client, path):
+    """Checked in the API, so no worker slot is spent on it."""
+    room = {'footprint_coordinates': [[0, 0], [4, 0], [8, 0]]}
+    response = post(client, path, {'room': room, 'energy': ENERGY})
+    assert response.status_code == 422
+    assert 'enclose 0.00' in response.json()['message']
+
+
 def test_job_key_ignores_fields_the_task_does_not_read():
     from api.jobs import job_key
 

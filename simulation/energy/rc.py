@@ -4,7 +4,7 @@ The model mirrors what idf_builder.py gives EnergyPlus, so /v1/energy-rc and
 /v1/energy (and the Grasshopper definition) describe the same building:
 
 - footprint, storeys, storey height and orientation;
-- window ratio per facade (wwr, wwr_by_cardinal or wwr_by_edge), with no windows on
+- window ratio per facade (wwr_by_cardinal or wwr_by_edge), with no windows on
   shared walls;
 - shared walls (shared_floors_by_edge) as adiabatic party walls, per storey;
 - an overhang as deep as the wall plus any extra depth (the fins are not modelled);
@@ -25,11 +25,11 @@ from functools import lru_cache
 
 import numpy as np
 
-from .idf_builder import PROGRAMS, footprint_area
+from ..geometry import cardinal, footprint, footprint_area, shading_depths
+from .idf_builder import PROGRAMS
 
 SHGC = 0.40  # the backend's simple glazing system
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-CARDINALS = (('north', 0.0), ('east', 90.0), ('south', 180.0), ('west', 270.0))
 # The 2017 calendar the backend's EnergyPlus run uses starts on a Sunday, like Core's 2023.
 _FIRST_MONDAY = 1
 
@@ -162,10 +162,6 @@ def _construction_set(constructions: dict, reference):
     return ConstructionSet(elements=elements)
 
 
-def _cardinal(azimuth_deg: float) -> str:
-    return min(CARDINALS, key=lambda c: min((azimuth_deg - c[1]) % 360, (c[1] - azimuth_deg) % 360))[0]
-
-
 @lru_cache
 def _reference():
     """Core's reference building, the source of every default the request does not set."""
@@ -195,15 +191,14 @@ def _facades(room: dict, facades: tuple) -> tuple[list, list]:
     azimuths = dict(facades)
     edges = [fid for fid, _ in facades]
     edge_wwr = room.get('wwr_by_edge')
-    wwr_map = room.get('wwr_by_cardinal') or {c: room.get('wwr', 0.4) for c, _ in CARDINALS}
     shared = room.get('shared_floors_by_edge') or []
-    floors, height = int(room.get('floors', 1)), float(room['floor_to_floor_height'])
+    floors, height = room['floors'], room['floor_to_floor_height']
     overrides, party_walls = [], []
     for k, fid in enumerate(edges):
         if edge_wwr is not None and len(edge_wwr) == len(edges):
             ratio = float(edge_wwr[k])
         else:
-            ratio = float(wwr_map.get(_cardinal(azimuths[fid]), 0.0))
+            ratio = float(room['wwr_by_cardinal'][cardinal(azimuths[fid])])
         overrides.append(FacadeOverride(facade_id=fid, wwr=min(ratio, 0.94)))
         storeys = sorted({f for f in (shared[k] if k < len(shared) else []) if 1 <= f <= floors})
         for f in storeys:
@@ -237,9 +232,7 @@ def _context(buildings: list[dict], orientation_offset: float):
     c, s = math.cos(a), math.sin(a)
     out = []
     for i, b in enumerate(buildings or []):
-        ring = [tuple(p) for p in b['footprint_coordinates']]
-        if ring[0] == ring[-1]:
-            ring.pop()
+        ring = footprint(b['footprint_coordinates'])
         out.append(ContextBuilding(
             identifier=f'context_{i}',
             footprints=(Footprint(exterior=tuple((x * c - y * s, x * s + y * c) for x, y in ring)),),
@@ -256,13 +249,11 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
     from epsm_core.specs.physics import FoundationSpec, GroundTemperatureSpec
 
     program = _program(building_program)
-    coords = [tuple(p) for p in room['footprint_coordinates']]
-    if coords[0] == coords[-1]:
-        coords.pop()
-    offset = float(room.get('orientation_offset', 0.0))
+    coords = footprint(room['footprint_coordinates'])
+    offset = room['orientation_offset']
     # Heath (ladybug rotate_xy) turns the plan counter-clockwise; Core's orientation is clockwise.
     orientation = (-offset) % 360.0
-    floors, height = int(room.get('floors', 1)), float(room['floor_to_floor_height'])
+    floors, height = room['floors'], room['floor_to_floor_height']
     reference = _reference()
 
     area = footprint_area(room['footprint_coordinates'])
@@ -309,10 +300,11 @@ def build_building(room: dict, context_buildings: list[dict], constructions: dic
         sensible_recovery_effectiveness=0.0,
         latent_recovery_effectiveness=0.0,
     )
-    overhang = float(room.get('wall_thickness', 0.30)) + float(room.get('additional_horizontal_shading_depth', 0.0))
+    overhang, _ = shading_depths(room)  # fins are not modelled
     overrides, party_walls = _facades(room, _facade_azimuths(tuple(coords), orientation))
-    facade = reference.facade.updated(default_wwr=min(float(room.get('wwr', 0.4) or 0.0), 0.94),
-                                      overrides=tuple(overrides), overhang=OverhangSpec(depth_m=overhang))
+    # Every facade gets its own window ratio in the overrides, so the default is never used.
+    facade = reference.facade.updated(default_wwr=0.0, overrides=tuple(overrides),
+                                      overhang=OverhangSpec(depth_m=overhang))
     return Building.from_footprint(
         Footprint(exterior=tuple(coords)), facade=facade, party_walls=tuple(party_walls),
         storeys=floors, storey_height_m=height, orientation_deg=orientation, identifier='heath',
@@ -341,7 +333,7 @@ def run_energy_rc(room: dict, context_buildings: list[dict], constructions: dict
     def sched(spec):
         return np.asarray(spec.hourly(year), dtype=float)
 
-    floors, height = int(room.get('floors', 1)), float(room['floor_to_floor_height'])
+    floors, height = room['floors'], room['floor_to_floor_height']
     area = footprint_area(room['footprint_coordinates']) * floors
     volume = area * height
     windows = [e for e in building.elements if 'WINDOW' in str(e.role)]

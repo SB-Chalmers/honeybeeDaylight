@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional, Union
 
+from ladybug_geometry.geometry2d import Point2D, Polygon2D
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from simulation.geometry import footprint, signed_area
+
+MIN_FLOOR_AREA = 1.0  # m²; smaller footprints are slider accidents, not rooms
 
 
 # ── Building description ─────────────────────────────────────────────────────
@@ -27,11 +32,35 @@ def _check_footprint(v: list[list[float]]) -> list[list[float]]:
     return v
 
 
+def _check_shape(points: list[list[float]]) -> None:
+    """Reject a footprint Honeybee and EnergyPlus would fail on later with an unclear error.
+
+    That is one with (almost) no area, such as a zero-width rectangle or points
+    on one line, or one whose edges cross (a bow tie). Repeated points are ignored.
+    """
+    ring = []
+    for x, y in footprint(points):
+        if not ring or (x, y) != ring[-1]:
+            ring.append((x, y))
+    if len(ring) > 1 and ring[0] == ring[-1]:
+        ring.pop()
+    polygon = Polygon2D([Point2D(x, y) for x, y in ring]) if len(ring) >= 3 else None
+    if polygon and polygon.is_self_intersecting:
+        raise ValueError('footprint_coordinates edges cross each other; list the corners in order around the room.')
+    area = polygon.area if polygon else 0.0
+    if area < MIN_FLOOR_AREA:
+        raise ValueError(f'footprint_coordinates enclose {area:.2f} m²; a room needs at least '
+                         f'{MIN_FLOOR_AREA:g} m². Check for zero width or points on one line.')
+
+
 class SensorGridConfig(BaseModel):
     """Sensor spacing (m) and height above the floor (m)."""
-    x_dim: float = 0.5
-    y_dim: float = 0.5
+    x_dim: float = Field(0.5, gt=0)
+    y_dim: float = Field(0.5, gt=0)
     offset: float = 0.75
+
+
+DIRECTIONS = ('north', 'east', 'south', 'west')
 
 
 class WwrByCardinal(BaseModel):
@@ -96,65 +125,47 @@ class RoomInput(BaseModel):
     def _footprint(cls, v):
         return _check_footprint(v)
 
-    @field_validator('wwr_by_edge')
-    @classmethod
-    def validate_wwr_by_edge(cls, v):
-        if v is None:
-            return v
-        if len(v) < 3:
-            raise ValueError('wwr_by_edge must include at least 3 values.')
-        for ratio in v:
-            if ratio < 0 or ratio > 1:
-                raise ValueError('Each wwr_by_edge value must be in [0, 1].')
-        return v
-
-    @field_validator('shared_floors_by_edge')
-    @classmethod
-    def validate_shared_floors_by_edge(cls, v):
-        if v is None:
-            return v
-        if len(v) < 3:
-            raise ValueError('shared_floors_by_edge must include at least 3 edges.')
-        for floors in v:
-            if any(floor < 1 for floor in floors):
-                raise ValueError('Floor numbers in shared_floors_by_edge must be >= 1.')
-        return v
-
     @model_validator(mode='after')
-    def _counter_clockwise(self):
-        """Store the footprint counter-clockwise, which Honeybee needs to extrude it.
+    def _check_and_orient(self):
+        """Check what single fields cannot, then store the footprint counter-clockwise.
 
-        A clockwise footprint would give an inside-out room. The per-edge lists
-        follow their edges: in the reversed list, edge k is the old edge n-2-k.
+        Honeybee needs a counter-clockwise footprint to extrude it; a clockwise one
+        gives an inside-out room. The per-edge lists follow their edges: in the
+        reversed list, edge k is the old edge n-2-k.
         """
-        points = self.footprint_coordinates
-        if points[0] == points[-1]:
-            points = points[:-1]
+        _check_shape(self.footprint_coordinates)
+        points = footprint(self.footprint_coordinates)
         n = len(points)
-        area2 = sum(points[i][0] * points[(i + 1) % n][1] - points[(i + 1) % n][0] * points[i][1]
-                    for i in range(n))
-        if area2 < 0:
-            self.footprint_coordinates = points[::-1]
+        if self.wwr_by_edge is not None:
+            if len(self.wwr_by_edge) != n:
+                raise ValueError(f'wwr_by_edge must contain exactly {n} values to match footprint edges.')
+            if not all(0 <= ratio <= 1 for ratio in self.wwr_by_edge):
+                raise ValueError('Each wwr_by_edge value must be in [0, 1].')
+        if self.shared_floors_by_edge is not None:
+            if len(self.shared_floors_by_edge) != n:
+                raise ValueError(f'shared_floors_by_edge must contain exactly {n} entries to match footprint edges.')
+            for i, floors in enumerate(self.shared_floors_by_edge):
+                for floor in floors:
+                    if not 1 <= floor <= self.floors:
+                        raise ValueError(f'shared_floors_by_edge[{i}] contains floor {floor}, '
+                                         'which the building does not have (floors are 1-based).')
+        if self.sensor_grid.offset >= self.floor_to_floor_height:
+            raise ValueError('sensor_grid offset must be below the ceiling (less than floor_to_floor_height).')
+
+        if signed_area(points) < 0:
+            self.footprint_coordinates = [list(p) for p in points[::-1]]
             for name in ('wwr_by_edge', 'shared_floors_by_edge'):
                 edges = getattr(self, name)
-                if edges is not None and len(edges) == n:
+                if edges is not None:
                     setattr(self, name, [edges[(n - 2 - k) % n] for k in range(n)])
         return self
 
     def to_simulation_dict(self) -> dict:
-        """Convert to the flat dict expected by simulation.inputs.load_room_inputs."""
-        d = self.model_dump(exclude={'wwr', 'wwr_by_cardinal', 'wwr_by_edge', 'shared_floors_by_edge'})
-        d['sensor_grid'] = self.sensor_grid.model_dump()
-        if self.wwr_by_edge is not None:
-            d['wwr_by_edge'] = self.wwr_by_edge
-        if self.shared_floors_by_edge is not None:
-            d['shared_floors_by_edge'] = self.shared_floors_by_edge
-        if self.wwr_by_cardinal:
-            d['wwr_by_cardinal'] = self.wwr_by_cardinal.model_dump()
-        elif self.wwr is not None:
-            d['wwr'] = self.wwr
-        else:
-            d['wwr_by_cardinal'] = WwrByCardinal().model_dump()
+        """Every field filled in, with the window ratio always as wwr_by_cardinal: what the simulations read."""
+        d = self.model_dump(exclude={'wwr'}, exclude_none=True)
+        if self.wwr_by_cardinal is None:
+            ratios = WwrByCardinal() if self.wwr is None else WwrByCardinal(**dict.fromkeys(DIRECTIONS, self.wwr))
+            d['wwr_by_cardinal'] = ratios.model_dump()
         return d
 
 

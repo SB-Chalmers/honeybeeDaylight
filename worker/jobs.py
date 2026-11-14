@@ -1,10 +1,10 @@
 """
 worker.jobs
 ───────────
-The two simulation jobs, as plain functions so they can be tested without
-Celery. Each takes the validated request as a dict, rebuilds what it needs in
-a throwaway folder, and returns a compact, JSON-ready result. Nothing is kept
-on disk afterwards.
+The simulation jobs, as plain functions so they can be tested without Celery.
+Each takes the request as the API validated it (api/routes.py ``_payload``),
+rebuilds what it needs in a throwaway folder, and returns a compact, JSON-ready
+result. Nothing is kept on disk afterwards.
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import numpy as np
 from . import packing
 from simulation.energy.epsm_client import fetch_constructions
 from simulation.energy.simulate import run_energy
-from simulation.inputs import GRID_DIM, load_room_inputs, validate_room_inputs
 from simulation.model import build_model
 from simulation.runner import df_summary, run_daylight, sda_summary
 
@@ -47,19 +46,9 @@ def _weather(epw: str | None, folder: str) -> tuple[str, str]:
 
 
 def build(room: dict, context: list[dict]):
-    """Rebuild the Honeybee model (and its sensor grids) from the compact room description."""
+    """Rebuild the daylight Honeybee model and its sensor grids from the room."""
     try:
-        cfg = load_room_inputs(room)
-        validate_room_inputs(cfg)
-        return build_model(cfg, context)
-    except Exception as exc:
-        raise BadInput(f'Unable to build the model from room: {exc}') from exc
-
-
-def check(room: dict) -> None:
-    """The room checks of build() without building the Honeybee model, for jobs that do not use it."""
-    try:
-        validate_room_inputs(load_room_inputs(room))
+        return build_model(room, context)
     except Exception as exc:
         raise BadInput(f'Unable to build the model from room: {exc}') from exc
 
@@ -82,15 +71,16 @@ def daylight_job(request: dict) -> dict:
     pack = request.get('pack', True)
     with tempfile.TemporaryDirectory(prefix='daylight_') as folder:
         epw_path, weather = _weather(request.get('epw'), folder)
-        model, grid = build(request['room'], request.get('context_buildings', []))
-        if grid.count == 0:
-            spacing = request['room'].get('sensor_grid') or {}
+        model, grids = build(request['room'], request.get('context_buildings', []))
+        sensor_count = sum(grid.count for grid in grids)
+        if sensor_count == 0:
+            spacing = request['room']['sensor_grid']
             raise BadInput(
                 'No sensor fits on the floor: the room is too small or narrow for a '
-                f"{spacing.get('x_dim', GRID_DIM):g} × {spacing.get('y_dim', GRID_DIM):g} m sensor grid."
+                f"{spacing['x_dim']:g} × {spacing['y_dim']:g} m sensor grid."
             )
         result = run_daylight(
-            model, grid.count, epw_path,
+            model, sensor_count, epw_path,
             run_sda=opts.get('run_sda', False),
             da_lux=da_lux,
             sda_target_pct=target,
@@ -118,7 +108,6 @@ def energy_job(request: dict) -> dict:
     pack = request.get('pack', True)
     room = request['room']
     context = request.get('context_buildings', [])
-    build(room, context)  # same geometry checks as daylight, so errors read the same
     try:
         constructions = fetch_constructions(opts['constructions'])
     except LookupError as exc:
@@ -145,7 +134,6 @@ def energy_rc_job(request: dict) -> dict:
     pack = request.get('pack', True)
     room = request['room']
     context = request.get('context_buildings', [])
-    check(room)  # same room checks as daylight and EnergyPlus, so errors read the same
     try:
         constructions = fetch_constructions(opts['constructions'])
     except LookupError as exc:

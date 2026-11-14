@@ -5,6 +5,7 @@ import shutil
 import pytest
 
 from simulation.energy.simulate import run_energy
+from tests import simulation_room
 
 pytestmark = pytest.mark.skipif(not shutil.which('energyplus'), reason='EnergyPlus not on PATH')
 
@@ -17,8 +18,7 @@ CONSTRUCTIONS = {kind: {'name': f'{kind}_c', 'u_value_w_m2k': 1.4, 'layers': [LA
 def test_six_storeys_add_up(tmp_path):
     """Annual, hourly and monthly heating agree, so no zone multiplier is applied twice or not at all."""
     # 6 floors: the 4 middle floors run as one zone with multiplier 4.
-    room = {'footprint_coordinates': [[0, 0], [8, 0], [8, 6], [0, 6]], 'floors': 6,
-            'floor_to_floor_height': 3.2, 'wwr': 0.4}
+    room = simulation_room(footprint_coordinates=[[0, 0], [8, 0], [8, 6], [0, 6]], floors=6, wwr=0.4)
     result = run_energy(room, [], CONSTRUCTIONS, 'Office', False, 'weather/gothenburg_tmyx.epw', str(tmp_path))
     annual = result['heating_energy_kwh']
     hourly = sum(result['heating_hourly_kwh'])
