@@ -17,5 +17,3 @@ ladybug-geometry==1.35.1
 foton-daylight[honeybee]==0.3.7
 numpy==2.1.0
 
-# EnergyPlus HTML summary parsing
-beautifulsoup4==4.15.0
