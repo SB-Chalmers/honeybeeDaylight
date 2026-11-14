@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # A separate layer, so bumping an EPSM pin does not reinstall everything above.
 COPY requirements-epsm.txt .
 RUN pip install --no-cache-dir -r requirements-epsm.txt
+# Ladybug creates ~/.ladybug on first import; made here so worker processes
+# starting together do not race to create it (FileExistsError).
+RUN mkdir -p /root/.ladybug
 
 COPY api/ api/
 COPY worker/ worker/
