@@ -11,7 +11,7 @@ from ladybug_geometry.geometry3d.pointvector import Point3D
 
 from grasshopper import heath_request, heath_sensors
 from simulation.energy.idf_builder import floor_groups
-from simulation.inputs import load_room_inputs
+from tests import simulation_room
 from simulation.model import build_model
 
 L_SHAPE = [[0, 0], [14, 0], [14, 5], [6, 5], [6, 11], [0, 11]]
@@ -34,7 +34,7 @@ def _rotated(room, floor):
      'simulate_all_floors': True, 'sensor_grid': {'x_dim': 0.7, 'y_dim': 0.7, 'offset': 0.85}},
 ])
 def test_sensor_points_match_backend(room):
-    cfg = load_room_inputs(room)
+    cfg = simulation_room(**room)
     model, _ = build_model(cfg)
     floors = range(1, cfg['floors'] + 1) if cfg['simulate_all_floors'] else [cfg['selected_floor_number']]
     grid = cfg['sensor_grid']
@@ -78,7 +78,7 @@ def test_daylight_floors_get_their_own_zone(floors, alone, expected):
 
 
 def test_each_sensor_gets_its_grid_cell():
-    footprint = _rotated(load_room_inputs({'footprint_coordinates': L_SHAPE, 'orientation_offset': 33.0}), 1)
+    footprint = _rotated(simulation_room(footprint_coordinates=L_SHAPE, orientation_offset=33.0), 1)
     cells = []
     points = heath_sensors.sensor_points(footprint, 0.5, 0.75, cells)
     assert len(cells) == len(points)

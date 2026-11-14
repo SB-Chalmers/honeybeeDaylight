@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from simulation.inputs import load_room_inputs
+from tests import simulation_room
 from simulation.model import build_model
 from simulation.runner import run_daylight, sda_summary
 
@@ -16,22 +16,22 @@ def cpu_backend(monkeypatch):
 
 
 def _model(floors=2):
-    cfg = load_room_inputs({
-        'footprint_coordinates': [[0, 0], [4, 0], [4, 4], [0, 4]],
-        'floors': floors,
-        'simulate_all_floors': True,
-        'floor_to_floor_height': 3.0,
-        'sensor_grid': {'x_dim': 2.0, 'y_dim': 2.0, 'offset': 0.75},
-    })
+    cfg = simulation_room(
+        footprint_coordinates=[[0, 0], [4, 0], [4, 4], [0, 4]],
+        floors=floors,
+        simulate_all_floors=True,
+        floor_to_floor_height=3.0,
+        sensor_grid={'x_dim': 2.0, 'y_dim': 2.0, 'offset': 0.75},
+    )
     return build_model(cfg)
 
 
 def test_df_is_flat_and_ordered_by_floor():
     model, grids = _model()
-    result = run_daylight(model, grids.count, EPW, quality='preview')
+    result = run_daylight(model, sum(g.count for g in grids), EPW, quality='preview')
 
-    assert result['df'].shape == (grids.count,)
-    assert result['points'].shape == (grids.count, 3)
+    assert result['df'].shape == (sum(g.count for g in grids),)
+    assert result['points'].shape == (sum(g.count for g in grids), 3)
     assert result['da'] is None
     assert [g['floor_number'] for g in result['grids']] == [1, 2]
     assert [g['start_sensor_index'] for g in result['grids']] == [0, grids[0].count]
@@ -41,7 +41,7 @@ def test_df_is_flat_and_ordered_by_floor():
 
 def test_sda_is_index_aligned_with_df():
     model, grids = _model(floors=1)
-    result = run_daylight(model, grids.count, EPW, run_sda=True, quality='preview')
+    result = run_daylight(model, sum(g.count for g in grids), EPW, run_sda=True, quality='preview')
     assert result['da'].shape == result['df'].shape
     assert np.all((result['da'] >= 0) & (result['da'] <= 100))
 
@@ -49,7 +49,7 @@ def test_sda_is_index_aligned_with_df():
 def test_sensor_count_mismatch_fails():
     model, grids = _model(floors=1)
     with pytest.raises(RuntimeError, match='prepared'):
-        run_daylight(model, grids.count + 1, EPW, quality='preview')
+        run_daylight(model, sum(g.count for g in grids) + 1, EPW, quality='preview')
 
 
 def test_sda_summary_counts_passing_sensors():
@@ -72,8 +72,8 @@ def test_studies_share_one_engine_per_process(monkeypatch):
     monkeypatch.setattr(runner, 'Engine', counting)
     monkeypatch.setattr(runner, '_ENGINES', {})
     model, grids = _model(floors=1)
-    first = run_daylight(model, grids.count, EPW, quality='preview')
-    second = run_daylight(model, grids.count, EPW, quality='preview')
+    first = run_daylight(model, sum(g.count for g in grids), EPW, quality='preview')
+    second = run_daylight(model, sum(g.count for g in grids), EPW, quality='preview')
 
     assert made == [{'backend': 'reference'}]
     assert foton.Engine is real

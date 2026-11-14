@@ -19,15 +19,22 @@ from __future__ import annotations
 
 import re
 
-from ..shared_walls import make_adiabatic, shared_edges_on_floor
+from honeybee.altnumber import no_limit
+from honeybee.boundarycondition import boundary_conditions
+from honeybee.model import Model
+from honeybee_energy.construction.opaque import OpaqueConstruction
+from honeybee_energy.construction.window import WindowConstruction
+from honeybee_energy.constructionset import ConstructionSet
+from honeybee_energy.hvac.idealair import IdealAirSystem
+from honeybee_energy.lib.programtypes import program_type_by_identifier
+from honeybee_energy.material.glazing import EnergyWindowMaterialSimpleGlazSys
+from honeybee_energy.material.opaque import EnergyMaterial
+from honeybee_energy.schedule.ruleset import ScheduleRuleset
+from honeybee_energy.simulation.parameter import SimulationParameter
+from honeybee_energy.writer import model_to_idf
 
-
-def footprint_area(points: list[list[float]]) -> float:
-    """Polygon area (shoelace formula) of an [x, y] footprint, closed or not."""
-    points = points[:-1] if points[0] == points[-1] else points
-    return abs(sum(points[i][0] * points[(i + 1) % len(points)][1] -
-                   points[(i + 1) % len(points)][0] * points[i][1]
-                   for i in range(len(points))) / 2)
+from ..geometry import (context_shades, footprint_area, make_adiabatic, shade_windows, shading_depths,
+                        shared_edges, storey, window_ratios)
 
 
 def _safe_id(name: str) -> str:
@@ -35,14 +42,8 @@ def _safe_id(name: str) -> str:
     return re.sub(r'[^A-Za-z0-9_\-]', '_', name)[:100]
 
 
-def _construction_set_from_epsm(constructions: dict) -> 'ConstructionSet':
+def _construction_set_from_epsm(constructions: dict) -> ConstructionSet:
     """Build a honeybee-energy ConstructionSet from EPSM construction records."""
-    from honeybee_energy.material.opaque import EnergyMaterial
-    from honeybee_energy.construction.opaque import OpaqueConstruction
-    from honeybee_energy.construction.window import WindowConstruction
-    from honeybee_energy.material.glazing import EnergyWindowMaterialSimpleGlazSys
-    from honeybee_energy.constructionset import ConstructionSet
-
     def _opaque(record: dict) -> OpaqueConstruction:
         """Layered opaque construction from an EPSM record (defaults fill gaps)."""
         materials = []
@@ -96,11 +97,11 @@ def floor_groups(room: dict) -> list[list[int]]:
     The ground and top floors always stand alone. Consecutive middle floors are
     merged unless their shared (adiabatic) walls differ.
     """
-    floors = int(room.get('floors', 1))
+    floors = room['floors']
     groups: list[list[int]] = []
     previous = None
     for floor in range(1, floors + 1):
-        key = (floor == 1, floor == floors, frozenset(shared_edges_on_floor(room, floor)))
+        key = (floor == 1, floor == floors, frozenset(shared_edges(room, floor)))
         if key == previous and not key[0] and not key[1]:
             groups[-1].append(floor)
         else:
@@ -118,49 +119,15 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     needs the multipliers because EnergyPlus reports zone variables (people,
     lights, windows...) for a single copy of a multiplied zone.
     """
-    import math
-    from honeybee.model import Model
-    from honeybee.room import Room
-    from honeybee.shade import Shade
-    from honeybee_energy.writer import model_to_idf
-    from honeybee_energy.simulation.parameter import SimulationParameter
-    from honeybee_energy.lib.programtypes import program_type_by_identifier
-    from ladybug_geometry.geometry3d.face import Face3D
-    from ladybug_geometry.geometry3d.pointvector import Point3D
-    from ladybug_geometry.geometry3d.polyface import Polyface3D
-
-    # ── Build Honeybee model ──────────────────────────────────────────────────
-    coords = list(room['footprint_coordinates'])
-    if coords[0] == coords[-1]:
-        coords.pop()
-    height = float(room['floor_to_floor_height'])
-    floors = int(room.get('floors', 1))
-    orientation = float(room.get('orientation_offset', 0.0))
-    wwr_map = room.get('wwr_by_cardinal') or {d: room.get('wwr', 0.4)
-                                               for d in ('north', 'east', 'south', 'west')}
-
-    def _cardinal(normal) -> str:
-        """Nearest cardinal direction for an outward wall normal."""
-        az = (math.degrees(math.atan2(normal.x, normal.y)) + 360.0) % 360.0
-        cardinals = [('north', 0.0), ('east', 90.0), ('south', 180.0), ('west', 270.0)]
-        return min(cardinals, key=lambda c: min((az - c[1]) % 360, (c[1] - az) % 360))[0]
-
-    from honeybee.boundarycondition import boundary_conditions
-    from honeybee_energy.hvac.idealair import IdealAirSystem
-    from honeybee.altnumber import no_limit
-
-    thickness = float(room.get('wall_thickness', 0.3))
-    h_depth = thickness + float(room.get('additional_horizontal_shading_depth', 0.0))
-    v_depth = thickness + float(room.get('additional_vertical_shading_depth', 0.0))
+    floors = room['floors']
+    overhang, fin = shading_depths(room)
+    construction_set = _construction_set_from_epsm(constructions)
 
     all_rooms = []
     for group in floor_groups(room):
         first, last = group[0], group[-1]
         name = f'Floor_{first}' if first == last else f'Floors_{first}_{last}'
-        z0 = (first - 1) * height
-        face = Face3D([Point3D(x, y, z0) for x, y in coords])
-        face = face.rotate_xy(math.radians(orientation), Point3D(0, 0, z0))
-        r = Room.from_polyface3d(name, Polyface3D.from_offset_face(face, height))
+        r = storey(room, first, name)
         # Identical stacked floors are simulated once and multiplied (HB Room multiplier).
         r.multiplier = len(group)
 
@@ -177,30 +144,19 @@ def build_idf(room: dict, constructions: dict, building_program: str,
         # the individual windows. That one window gets an overhang and two fins as
         # deep as the daylight model's, so cooling responds to reveals and
         # overhangs. Shading every individual window instead costs ~15 s a run.
-        edge_wwr = room.get('wwr_by_edge')
         walls = [f for f in r.faces if str(f.type) == 'Wall']
-        if edge_wwr is not None and len(edge_wwr) == len(walls):
-            ratios = [float(v) for v in edge_wwr]
-        else:
-            ratios = [float(wwr_map.get(_cardinal(f.normal), 0.0)) for f in walls]
-        shared = shared_edges_on_floor(room, first)  # same for every floor in the group
-        for edge_index, (wall_face, ratio) in enumerate(zip(walls, ratios)):
+        shared = shared_edges(room, first)  # same for every floor in the group
+        for edge_index, (wall_face, ratio) in enumerate(zip(walls, window_ratios(room, walls))):
             if edge_index in shared:
                 make_adiabatic(wall_face)
             elif ratio > 0:
                 wall_face.apertures_by_ratio(ratio, 0.01)
-                for aperture in wall_face.apertures:
-                    if h_depth > 0:
-                        aperture.overhang(depth=h_depth)
-                    if v_depth > 0:
-                        aperture.left_fin(depth=v_depth)
-                        aperture.right_fin(depth=v_depth)
+                shade_windows(wall_face, overhang, fin)
 
         prog = program_type_by_identifier(PROGRAMS[building_program]).duplicate()
         # Natural ventilation: raise the cooling setpoint to 50 °C so the ideal
         # loads never cool mechanically. Heating is unaffected.
         if natural_ventilation and prog.setpoint:
-            from honeybee_energy.schedule.ruleset import ScheduleRuleset
             no_cool_sched = ScheduleRuleset.from_constant_value(
                 f'NoCooling_{name}', 50.0, prog.setpoint.cooling_schedule.schedule_type_limit
             )
@@ -209,7 +165,7 @@ def build_idf(room: dict, constructions: dict, building_program: str,
             prog.setpoint = new_setpoint
 
         r.properties.energy.program_type = prog
-        r.properties.energy.construction_set = _construction_set_from_epsm(constructions)
+        r.properties.energy.construction_set = construction_set
         # A fresh ideal air system with no capacity limits, so EnergyPlus never
         # autosizes (autosize with sizing disabled crashes EP 24.2 on Linux).
         ideal_air = IdealAirSystem(f'{name}_IdealAir')
@@ -221,21 +177,10 @@ def build_idf(room: dict, constructions: dict, building_program: str,
 
     model = Model('Energy_Model', rooms=all_rooms)
 
-    # Add context buildings as detached shade
-    for bldg_idx, context in enumerate(context_buildings or []):
-        ctx_coords = list(context['footprint_coordinates'])
-        if ctx_coords[0] == ctx_coords[-1]:
-            ctx_coords.pop()
-        ctx_height = context['floors'] * context['floor_to_floor_height']
-        ctx_pts = [Point3D(x, y, 0.0) for x, y in ctx_coords]
-        ctx_face = Face3D(ctx_pts)
-        ctx_poly = Polyface3D.from_offset_face(ctx_face, ctx_height)
-        for face_idx, face_obj in enumerate(ctx_poly.faces):
-            model.add_shade(Shade(f'Context_{bldg_idx}_{face_idx}', face_obj, is_detached=True))
+    for shade in context_shades(context_buildings):
+        model.add_shade(shade)
 
     # ── Generate IDF ─────────────────────────────────────────────────────────
-    import re
-
     sim = SimulationParameter()
     # Disable zone/system sizing — the public EPSM service has no DesignDay objects
     # and EnergyPlus terminates with a Fatal error if sizing is requested without them.

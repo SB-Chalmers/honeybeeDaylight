@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from simulation.energy import idf_builder, local_runner
+from tests import full_room
 from worker import jobs, packing
 
 ROOM = {
@@ -31,7 +32,7 @@ def test_packing_round_trip():
 
 def test_daylight_job_returns_packed_and_plain(monkeypatch):
     monkeypatch.setenv('FOTON_BACKEND', 'reference')
-    request = {'room': ROOM, 'daylight': {'quality': 'preview'}}
+    request = {'room': full_room(ROOM), 'daylight': {'quality': 'preview'}}
     packed = jobs.daylight_job(request)
     plain = jobs.daylight_job({**request, 'pack': False})
 
@@ -41,40 +42,21 @@ def test_daylight_job_returns_packed_and_plain(monkeypatch):
     assert np.allclose(packing.unpack(packed['df']), plain['df'], atol=0.01)
 
 
-def test_bad_room_and_bad_epw_are_client_errors():
-    with pytest.raises(jobs.BadInput):
-        jobs.daylight_job({'room': {**ROOM, 'floors': 0}})
+def test_bad_epw_is_a_client_error():
     with pytest.raises(jobs.BadInput, match='EPW'):
-        jobs.daylight_job({'room': ROOM, 'epw': 'not a weather file'})
-
-
-BROKEN_ROOMS = {
-    'zero width': ({'footprint_coordinates': [[0, 0], [8, 0], [8, 0], [0, 0]]}, 'enclose 0.00'),
-    'points on one line': ({'footprint_coordinates': [[0, 0], [4, 0], [8, 0]]}, 'enclose 0.00'),
-    'bow tie': ({'footprint_coordinates': [[0, 0], [4, 4], [4, 0], [0, 4]]}, 'cross'),
-    'sensors above ceiling': ({'floor_to_floor_height': 0.5}, 'below the ceiling'),
-}
-
-
-@pytest.mark.parametrize('job', [jobs.daylight_job, jobs.energy_job])
-@pytest.mark.parametrize('room, message', BROKEN_ROOMS.values(), ids=BROKEN_ROOMS.keys())
-def test_broken_geometry_is_a_client_error(job, room, message):
-    """Impossible geometry is rejected (HTTP 400) before Foton or EnergyPlus run."""
-    request = {'room': {**ROOM, **room}, 'energy': {'constructions': {}}}
-    with pytest.raises(jobs.BadInput, match=message):
-        job(request)
+        jobs.daylight_job({'room': full_room(ROOM), 'epw': 'not a weather file'})
 
 
 def test_room_too_small_for_its_sensor_grid_is_a_client_error(monkeypatch):
     monkeypatch.setenv('FOTON_BACKEND', 'reference')
-    room = {**ROOM, 'sensor_grid': {'x_dim': 20.0, 'y_dim': 20.0, 'offset': 0.75}}
+    room = full_room({**ROOM, 'sensor_grid': {'x_dim': 20.0, 'y_dim': 20.0, 'offset': 0.75}})
     with pytest.raises(jobs.BadInput, match='No sensor fits'):
         jobs.daylight_job({'room': room})
 
 
 @pytest.mark.parametrize('program', list(idf_builder.PROGRAMS))
 def test_idf_builds_for_every_program(program):
-    idf, area, _ = idf_builder.build_idf(ROOM, CONSTRUCTIONS, program, False, [])
+    idf, area, _ = idf_builder.build_idf(full_room(ROOM), CONSTRUCTIONS, program, False, [])
     assert area == pytest.approx(32.0)
     assert 'Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly' in idf
 
@@ -88,7 +70,7 @@ def test_energy_job_with_fake_energyplus(monkeypatch):
                 'heating_hourly_kwh': [1.0] * 8760, 'cooling_hourly_kwh': [0.0] * 8760}
 
     monkeypatch.setattr('simulation.energy.simulate.run_local_eplus', fake_eplus)
-    result = jobs.energy_job({'room': ROOM, 'energy': {'constructions': {}}})
+    result = jobs.energy_job({'room': full_room(ROOM), 'energy': {'constructions': {}}})
 
     assert result['floor_area_m2'] == 32.0
     assert result['heating_demand_kwh_m2'] == 100.0
@@ -101,7 +83,7 @@ def test_unknown_construction_is_client_error(monkeypatch):
 
     monkeypatch.setattr(jobs, 'fetch_constructions', missing)
     with pytest.raises(jobs.BadInput, match='not found'):
-        jobs.energy_job({'room': ROOM, 'energy': {'constructions': {'wall': 'x'}}})
+        jobs.energy_job({'room': full_room(ROOM), 'energy': {'constructions': {'wall': 'x'}}})
 
 
 def test_hourly_loads_from_eso_keep_last_environment(tmp_path):

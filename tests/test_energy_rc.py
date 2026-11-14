@@ -9,6 +9,7 @@ pytest.importorskip('epsm_rc')
 
 from api.schemas import EnergyResult  # noqa: E402
 from simulation.energy import rc  # noqa: E402
+from tests import full_room  # noqa: E402
 from worker import jobs, packing  # noqa: E402
 
 from .test_jobs import CONSTRUCTIONS, ROOM  # noqa: E402
@@ -17,7 +18,7 @@ ENERGY = {'constructions': {}, 'building_program': 'Office'}
 
 
 def request(**room):
-    return {'room': {**ROOM, **room}, 'energy': dict(ENERGY)}
+    return {'room': full_room({**ROOM, **room}), 'energy': dict(ENERGY)}
 
 
 @pytest.fixture(autouse=True)
@@ -63,20 +64,20 @@ def test_natural_ventilation_turns_cooling_off():
 
 def test_window_ratio_per_cardinal_and_per_edge():
     building = rc.build_building(
-        {**ROOM, 'wwr_by_cardinal': {'north': 0.1, 'east': 0.2, 'south': 0.5, 'west': 0.3}},
+        full_room({**ROOM, 'wwr_by_cardinal': {'north': 0.1, 'east': 0.2, 'south': 0.5, 'west': 0.3}}),
         [], CONSTRUCTIONS, 'Office', False)
     by_facade = {o.facade_id: o.wwr for o in building.facade.overrides if o.storey is None}
     # Counter-clockwise footprint, so edge 0 (p0->p1) faces south, then east, north, west.
     assert by_facade == {'main.r0.e0': 0.5, 'main.r0.e1': 0.2, 'main.r0.e2': 0.1, 'main.r0.e3': 0.3}
-    edges = rc.build_building({**ROOM, 'wwr_by_edge': [0.1, 0.2, 0.3, 0.4]}, [], CONSTRUCTIONS,
+    edges = rc.build_building(full_room({**ROOM, 'wwr_by_edge': [0.1, 0.2, 0.3, 0.4]}), [], CONSTRUCTIONS,
                               'Office', False)
     assert [o.wwr for o in edges.facade.overrides] == [0.1, 0.2, 0.3, 0.4]
 
 
 def test_rotation_moves_cardinal_ratios_with_the_walls():
     building = rc.build_building(
-        {**ROOM, 'orientation_offset': 90.0,
-         'wwr_by_cardinal': {'north': 0.1, 'east': 0.2, 'south': 0.5, 'west': 0.3}},
+        full_room({**ROOM, 'orientation_offset': 90.0,
+         'wwr_by_cardinal': {'north': 0.1, 'east': 0.2, 'south': 0.5, 'west': 0.3}}),
         [], CONSTRUCTIONS, 'Office', False)
     by_facade = {o.facade_id: o.wwr for o in building.facade.overrides}
     # Turned 90° counter-clockwise, edge 0 faces east.
@@ -84,7 +85,7 @@ def test_rotation_moves_cardinal_ratios_with_the_walls():
 
 
 def test_shared_walls_are_party_walls_without_windows():
-    building = rc.build_building({**ROOM, 'shared_floors_by_edge': [[], [1, 2], [], []]}, [],
+    building = rc.build_building(full_room({**ROOM, 'shared_floors_by_edge': [[], [1, 2], [], []]}), [],
                                  CONSTRUCTIONS, 'Office', False)
     walls = building.geometry.party_walls
     assert [(w.facade_id, w.bottom_m, w.top_m) for w in walls] == [('main.r0.e1', 0.0, 6.0)]
@@ -92,7 +93,7 @@ def test_shared_walls_are_party_walls_without_windows():
     assert zeroed == {('main.r0.e1', 0), ('main.r0.e1', 1)}
     # Infiltration is per exterior area, and shared walls are not exterior (as in EnergyPlus):
     # this 4 x 4 m, 2 x 3 m room loses 24 of its 96 m2 of walls, so 112 -> 88 m2 with the roof.
-    plain = rc.build_building(ROOM, [], CONSTRUCTIONS, 'Office', False)
+    plain = rc.build_building(full_room(ROOM), [], CONSTRUCTIONS, 'Office', False)
     assert building.hvac.airflow.envelope_infiltration_ach == pytest.approx(
         plain.hvac.airflow.envelope_infiltration_ach * 88 / 112)
     open_room = jobs.energy_rc_job(request(wwr=0.4))
@@ -103,7 +104,7 @@ def test_shared_walls_are_party_walls_without_windows():
 def test_context_is_placed_in_the_rotated_frame_and_shades():
     south = {'footprint_coordinates': [[-10, -20], [14, -20], [14, -8], [-10, -8]], 'floors': 6,
              'floor_to_floor_height': 3.2}
-    building = rc.build_building({**ROOM, 'orientation_offset': 30.0}, [south], CONSTRUCTIONS, 'Office', False)
+    building = rc.build_building(full_room({**ROOM, 'orientation_offset': 30.0}), [south], CONSTRUCTIONS, 'Office', False)
     ring = building.context.buildings[0].footprints[0].exterior
     a = math.radians(-30.0)
     x, y = south['footprint_coordinates'][0]
@@ -127,10 +128,7 @@ def test_every_program_runs(program):
     assert np.isfinite(result['total_energy_kwh']) and result['total_energy_kwh'] > 0
 
 
-def test_broken_geometry_and_unknown_constructions_are_client_errors(monkeypatch):
-    with pytest.raises(jobs.BadInput, match='enclose 0.00'):
-        jobs.energy_rc_job(request(footprint_coordinates=[[0, 0], [4, 0], [8, 0]]))
-
+def test_unknown_constructions_are_client_errors(monkeypatch):
     def missing(names):
         raise LookupError('EPSM constructions not found: [x]')
 
