@@ -79,6 +79,32 @@ def _construction_set_from_epsm(constructions: dict) -> ConstructionSet:
     return cs
 
 
+# Monthly heat balance term -> EnergyPlus report variable (OUTPUTS asks for them, simulate.py reads them).
+BALANCE = {
+    'heating': 'Zone Ideal Loads Supply Air Sensible Heating Energy',
+    'cooling': 'Zone Ideal Loads Supply Air Sensible Cooling Energy',
+    'people': 'Zone People Sensible Heating Energy',
+    'lighting': 'Zone Lights Electricity Energy',
+    'equipment': 'Zone Electric Equipment Electricity Energy',
+    'solar': 'Zone Windows Total Heat Gain Energy',
+    'infiltration_gain': 'Zone Infiltration Sensible Heat Gain Energy',
+    'infiltration_loss': 'Zone Infiltration Sensible Heat Loss Energy',
+}
+# Ideal loads report as district heating and cooling, under the Heating and Cooling end uses
+# (district heating also serves hot water in some programs). Total Site Energy adds every fuel.
+HEATING_METER, COOLING_METER = 'Heating:DistrictHeatingWater', 'Cooling:DistrictCooling'
+SITE_METERS = ('Electricity:Facility', 'NaturalGas:Facility', 'DistrictHeatingWater:Facility',
+               'DistrictCooling:Facility')
+
+
+# What simulate.py reads: annual site meters, hourly ideal loads and the monthly heat balance.
+OUTPUTS = '\n\n' + '\n'.join(
+    [f'Output:Meter,{meter},RunPeriod;' for meter in (HEATING_METER, COOLING_METER, *SITE_METERS)]
+    + [f'Output:Variable,*,{BALANCE[key]},Hourly;' for key in ('heating', 'cooling')]
+    + [f'Output:Variable,*,{variable},Monthly;' for variable in BALANCE.values()]
+) + '\n\n'
+
+
 # Frontend building_program names -> honeybee-energy program type identifiers.
 # All of these exist in honeybee-energy-standards 2.3.x.
 PROGRAMS = {
@@ -197,42 +223,15 @@ def build_idf(room: dict, constructions: dict, building_program: str,
     # Exterior shading only, without reflections: much cheaper, and context
     # buildings still cast shadows (HB Shadow Calculation: FullExterior).
     sim.shadow_calculation.solar_distribution = 'FullExterior'
-    # Only the summary table we parse, and no SQLite output (HB Simulation Output).
-    # SQLite also segfaults EnergyPlus 24.2 on macOS ARM64.
-    sim.output.summary_reports = ['AnnualBuildingUtilityPerformanceSummary']
+    # No summary tables and no SQLite: results come from the meter and variable
+    # files (see simulate.py). SQLite also segfaults EnergyPlus 24.2 on macOS ARM64.
+    sim.output.summary_reports = []
     sim.output.include_sqlite = False
     sim_idf = sim.to_idf()
-    # Align Version with the installed EnergyPlus binary (OpenStudio 3.9 ships 24.2).
-    # honeybee-energy writes 23.2 by default; update to avoid version mismatch.
-    sim_idf = re.sub(r'(Version,\s*)[\d\.]+', r'\g<1>24.2', sim_idf)
     # Remove the hardcoded 2017 year from RunPeriod so EnergyPlus uses the EPW calendar.
     # A mismatched year causes EnergyPlus to skip all environment periods silently.
     sim_idf = re.sub(r' 2017,(\s+!- (?:start|end) year)', r' ,\1', sim_idf)
-
-    # Outputs we parse (see local_runner.py):
-    # - annual meters fill the End Uses table in eplustbl.htm (ideal loads
-    #   report as District Heating/Cooling);
-    # - hourly ideal-loads heating/cooling go to eplusout.eso for the time series;
-    # - the monthly table gives the heat balance chart, one table per zone.
-    _extra = (
-        '\nOutput:Meter,DistrictHeating:Building,Annual;\n'
-        'Output:Meter,DistrictCooling:Building,Annual;\n'
-        'Output:Meter,Electricity:Building,Annual;\n'
-        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Heating Energy,Hourly;\n'
-        'Output:Variable,*,Zone Ideal Loads Supply Air Sensible Cooling Energy,Hourly;\n'
-        '\nOutput:Table:Monthly,\n'
-        '  Monthly Heat Balance,\n'
-        '  2,\n'
-        '  Zone Ideal Loads Supply Air Sensible Heating Energy,SumOrAverage,\n'
-        '  Zone Ideal Loads Supply Air Sensible Cooling Energy,SumOrAverage,\n'
-        '  Zone People Sensible Heating Energy,SumOrAverage,\n'
-        '  Zone Lights Electricity Energy,SumOrAverage,\n'
-        '  Zone Electric Equipment Electricity Energy,SumOrAverage,\n'
-        '  Zone Windows Total Heat Gain Energy,SumOrAverage,\n'
-        '  Zone Infiltration Sensible Heat Gain Energy,SumOrAverage,\n'
-        '  Zone Infiltration Sensible Heat Loss Energy,SumOrAverage;\n'
-    )
-    idf_text = sim_idf + _extra + '\n' + model_to_idf(model)
+    idf_text = sim_idf + OUTPUTS + model_to_idf(model)
     floor_area = footprint_area(room['footprint_coordinates']) * floors
     multipliers = {r.identifier.upper(): r.multiplier for r in all_rooms}
     return idf_text, floor_area, multipliers
